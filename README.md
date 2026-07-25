@@ -4,6 +4,10 @@ Vero Designer is an automatic Vero layout generator that converts electronic sch
 
 Simply draw your schematic, click **Generate Vero**, and Vero Designer will create a Vero layout ready for your next project.
 
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/8716f07b9a0e0129d6802d445a81a264514ca792/soss.png)
+
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/8716f07b9a0e0129d6802d445a81a264514ca792/sos.png)
+
 ---
 
 ## Creating a Schematic
