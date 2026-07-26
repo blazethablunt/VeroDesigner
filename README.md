@@ -10,6 +10,17 @@ Simply draw your schematic, click **Generate Vero**, and Vero Designer will crea
 
 ---
 
+## Manual VS Automatic
+
+The following example compares a manually designed stripboard layout with one generated automatically by Vero Designer.
+The generated layout required no manual editing. 
+
+Despite being created automatically, it produces a layout nearly identical in size and overall efficiency to one designed by an experienced human builder.
+
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/36137a4fac1d879d4df5c459f1d175e3580945cc/d%2B%20comp.png)
+
+---
+
 ## Creating a Schematic
 
 Use the left sidebar to select components and place them on the schematic grid.
@@ -139,4 +150,7 @@ Currently supported:
 
 Vero Designer has no external dependencies.
 
-You can download the HTML file and run it completely offline in your web browser.
+You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.0.40/index.html) the HTML file and run it completely offline in your web browser.
+
+
+
