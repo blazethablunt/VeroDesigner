@@ -66,18 +66,6 @@ All nets default to **Offboard**, but this can be changed at any time.
 
 ---
 
-## Project Management
-
-Projects can be saved and reopened later.
-
-You can also:
-
-* Give your circuit a name
-* Add a project description
-* Export PNG images from both the schematic editor and the generated Vero layout
-
----
-
 ## Circuit Data & Vero Settings
 
 Connection nets are automatically detected, grouped, and color-coded. They are displayed in the **Circuit Data** panel on the right side of the interface.
@@ -89,6 +77,18 @@ The **Vero Settings** section provides several useful options, including:
 * **Update IDs** – Reassigns IDs to all schematic components (schematic page only)
 * **Update Vero** – Applies schematic changes to the existing Vero layout without generating a new layout
 * **Regenerate Layout** – Generates a completely new layout after major schematic changes
+
+---
+
+## Project Management
+
+Projects can be saved and reopened later.
+
+You can also:
+
+* Give your circuit a name
+* Add a project description
+* Export PNG images from both the schematic editor and the generated Vero layout
 
 ---
 
