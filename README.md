@@ -1,4 +1,8 @@
-# Vero Designer
+<h1 align="left">
+  <img src="https://i.ibb.co/23C8HbmF/Vero-Designer-Logo2.png" alt="Logo" width="50" align="left">
+  <span margin-top:"0">Vero Designer</span>
+</h1>
+
 ![GitHub Release](https://img.shields.io/github/v/release/blazethablunt/veroDesigner) [![See What's New](https://img.shields.io/badge/See-What's_New-blue)](#whats-new) ![Static Badge](https://img.shields.io/badge/dependencies-none-red) ![GitHub Repo stars](https://img.shields.io/github/stars/blazethablunt/veroDesigner)
 
 
