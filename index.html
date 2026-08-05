@@ -174,10 +174,15 @@
     }
 
     .workspace-shell {
+      position: relative;
       display: grid;
       grid-template-columns: 230px minmax(320px, 1fr) 300px;
       min-height: 0;
       overflow: hidden;
+      transition: grid-template-columns .2s ease;
+    }
+    .workspace-shell.right-sidebar-collapsed {
+      grid-template-columns: 230px minmax(320px, 1fr) 0;
     }
 
     .sidebar {
@@ -187,7 +192,46 @@
       overflow-y: auto;
       scrollbar-color: var(--border-strong) transparent;
     }
-    .sidebar.right { border-right: 0; border-left: 1px solid var(--border); }
+    .sidebar.right {
+      border-right: 0;
+      border-left: 1px solid var(--border);
+      min-width: 0;
+      transition: transform .2s ease, opacity .2s ease;
+    }
+    .workspace-shell.right-sidebar-collapsed .sidebar.right {
+      transform: translateX(100%);
+      opacity: 0;
+      pointer-events: none;
+      border-left-color: transparent;
+    }
+    .right-sidebar-notch {
+      position: absolute;
+      z-index: 35;
+      right: 300px;
+      top: 50%;
+      width: 24px;
+      height: 58px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 9px 0 0 9px;
+      transform: translateY(-50%);
+      background: var(--panel-2);
+      border: 1px solid var(--border-strong);
+      border-right: 0;
+      box-shadow: -4px 0 14px rgba(0,0,0,.25);
+      font-size: 20px;
+      font-weight: 900;
+      line-height: 1;
+      transition: right .2s ease, background .15s ease;
+    }
+    .right-sidebar-notch:hover { background: var(--panel-3); }
+    /* Preserve the centering transform while pressed; the global button:active
+       rule otherwise replaces it and makes the notch jump away from the cursor. */
+    .right-sidebar-notch:active { transform: translateY(-50%); }
+    .workspace-shell.right-sidebar-collapsed .right-sidebar-notch {
+      right: 0;
+      border-right: 1px solid var(--border-strong);
+    }
 
     .side-section {
       padding: 14px;
@@ -348,7 +392,31 @@
       font-weight: 750;
     }
     .view-tab.active { color: white; background: var(--bg-deep); border-color: var(--border); }
-    .view-tools { margin-left: auto; display: flex; gap: 6px; padding-bottom: 6px; }
+    .view-tools { margin-left: auto; display: flex; align-items: center; gap: 6px; padding-bottom: 6px; }
+    .schematic-option-toggle {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel-2);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    .schematic-option-toggle:hover { background: var(--panel-3); border-color: var(--border-strong); }
+    .schematic-option-toggle input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
 
     .canvas-wrap {
       position: relative;
@@ -575,6 +643,7 @@
       font-weight: 760;
     }
     .dialog-actions .danger-primary:hover { background: #913640; }
+    .vero-warning { color: var(--danger); font-weight: 850; }
 
     .generation-overlay {
       position: fixed;
@@ -615,14 +684,46 @@
     .hidden { display: none !important; }
 
     /* SVG classes */
-    .schematic-wire { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; pointer-events: stroke; }
-    .schematic-wire.selected { stroke-width: 5; }
+    .schematic-wire-hit {
+      fill: none;
+      stroke: rgba(255,255,255,.001);
+      stroke-width: 18;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: stroke;
+      cursor: pointer;
+    }
+    .schematic-wire { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; transition: stroke-width .12s ease, filter .12s ease, opacity .12s ease; }
+    .schematic-wire-hit:hover + .schematic-wire:not(.selected) {
+      stroke: #c9f6ff !important;
+      stroke-width: 4.4;
+      filter: drop-shadow(0 0 3px rgba(115,220,243,.9));
+    }
+    .schematic-wire.selected { stroke-width: 5; filter: drop-shadow(0 0 3px rgba(255,255,255,.55)); }
     .wire-edit-track { fill: none; stroke: transparent; stroke-width: 18; pointer-events: stroke; }
     .wire-edit-guide { fill: none; stroke: #17a5c6; stroke-width: 1.6; stroke-dasharray: 5 4; pointer-events: none; }
     .wire-edit-handle { fill: #17a5c6; stroke: #b9f2ff; stroke-width: 1.5; pointer-events: all; }
     .wire-edit-handle.horizontal { cursor: ns-resize; }
     .wire-edit-handle.vertical { cursor: ew-resize; }
-    .component-hit { fill: transparent; pointer-events: all; cursor: move; }
+    .component-hit { cursor: move; }
+    .component-hit-stroke {
+      fill: none;
+      stroke: rgba(255,255,255,.001);
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: stroke;
+    }
+    .component-hit-fill {
+      fill: rgba(255,255,255,.001);
+      stroke: rgba(255,255,255,.001);
+      stroke-width: 8;
+      pointer-events: all;
+    }
+    .schematic-component-labels .component-label-hit {
+      pointer-events: visiblePainted;
+      cursor: move;
+    }
     .schematic-placement-preview {
       opacity: .5;
       pointer-events: none;
@@ -643,15 +744,18 @@
     .junction { pointer-events: none; }
 
     @media (max-width: 880px) {
-      .workspace-shell { grid-template-columns: 210px minmax(320px, 1fr); }
+      .workspace-shell,
+      .workspace-shell.right-sidebar-collapsed { grid-template-columns: 210px minmax(320px, 1fr); }
       .sidebar.right { position: fixed; right: 0; top: var(--toolbar-height); bottom: 28px; width: 300px; z-index: 30; box-shadow: -18px 0 45px rgba(0,0,0,.35); transform: translateX(100%); transition: transform .2s ease; }
-      .sidebar.right.open { transform: translateX(0); }
+      .sidebar.right.open { transform: translateX(0); opacity: 1; pointer-events: auto; }
+      .right-sidebar-notch { display: none; }
       #toggleInspectorBtn { display: inline-flex !important; }
     }
 
     @media (max-width: 576px) {
       :root { --toolbar-height: 52px; }
-      .workspace-shell { grid-template-columns: 1fr; }
+      .workspace-shell,
+      .workspace-shell.right-sidebar-collapsed { grid-template-columns: 1fr; }
       .sidebar.left { position: fixed; left: 0; top: var(--toolbar-height); bottom: 28px; width: 235px; z-index: 31; box-shadow: 18px 0 45px rgba(0,0,0,.35); transform: translateX(-100%); transition: transform .2s ease; }
       .sidebar.left.open { transform: translateX(0); }
       #togglePaletteBtn { display: inline-flex !important; }
@@ -696,15 +800,15 @@
       </div>
     </header>
 
-    <main class="workspace-shell">
+    <main id="workspaceShell" class="workspace-shell">
       <aside id="leftSidebar" class="sidebar left">
         <section class="side-section">
           <h2 class="section-title">Editing tools</h2>
           <div class="tool-grid">
-            <button class="tool-button active" data-tool="select" title="Select and drag components">
+            <button class="tool-button active" data-tool="select" title="Select and drag components (F1)">
               <span class="glyph">↖</span><span>Select</span>
             </button>
-            <button class="tool-button" data-tool="wire" title="Click one pin, then another">
+            <button class="tool-button" data-tool="wire" title="Click one pin, then another (F2)">
               <span class="glyph">⌁</span><span>Wire</span>
             </button>
           </div>
@@ -770,11 +874,23 @@
               <label for="propTransistorModel">Transistor model</label>
               <select id="propTransistorModel"></select>
             </div>
+            <div id="diodeTypeField" class="field hidden">
+              <label for="propDiodeType">Diode type</label>
+              <select id="propDiodeType">
+                <option value="standard">Standard</option>
+                <option value="schottky">Schottky</option>
+                <option value="zener">Zener</option>
+              </select>
+            </div>
+            <div id="diodeModelField" class="field hidden">
+              <label for="propDiodeModel">Diode model</label>
+              <select id="propDiodeModel"></select>
+            </div>
             <div id="opampTypeField" class="field hidden">
               <label for="propOpampType">Op-amp type</label>
               <select id="propOpampType">
                 <option value="single">Single</option>
-                <option value="double">Double</option>
+                <option value="double">Dual</option>
               </select>
             </div>
             <div id="opampModelField" class="field hidden">
@@ -786,8 +902,10 @@
               <select id="propSwitchType">
                 <option value="spst">SPST</option>
                 <option value="spdt">SPDT</option>
+                <option value="sp3t">SP3T</option>
                 <option value="dpst">DPST</option>
                 <option value="dpdt">DPDT</option>
+                <option value="dp3t">DP3T</option>
               </select>
             </div>
             <div id="otherIcModelField" class="field hidden">
@@ -828,6 +946,17 @@
               <label id="propValueLabel" for="propValue">Value / model</label>
               <input id="propValue" maxlength="40">
             </div>
+            <div id="potTypeField" class="field hidden">
+              <label for="propPotType">Type</label>
+              <select id="propPotType">
+                <option value="pot">Pot</option>
+                <option value="trimmer">Trimmer</option>
+              </select>
+            </div>
+            <div id="potResistanceField" class="field hidden">
+              <label for="propPotResistance">Resistance</label>
+              <input id="propPotResistance" maxlength="24" placeholder="100k">
+            </div>
             <div class="field">
               <label for="propRotation">Rotation</label>
               <input id="propRotation" readonly>
@@ -835,6 +964,7 @@
             <div class="property-actions">
               <button id="rotateLeftBtn" title="Rotate left">↶ Rotate</button>
               <button id="rotateRightBtn" title="Rotate right">Rotate ↷</button>
+              <button id="flipMirrorBtn" class="wide" title="Mirror the selected component horizontally">Flip / Mirror</button>
               <button id="duplicateBtn" class="wide">Duplicate</button>
               <button id="deleteBtn" class="wide danger">Delete selected</button>
             </div>
@@ -851,9 +981,18 @@
           <button id="schematicTab" class="view-tab active">Schematic</button>
           <button id="veroTab" class="view-tab">Vero layout</button>
           <div id="schematicViewTools" class="view-tools">
+            <button id="copySchematicBtn" title="Copy selected components (Ctrl/Cmd+C)">Copy</button>
+            <button id="pasteSchematicBtn" title="Paste copied components (Ctrl/Cmd+V)">Paste</button>
+            <button id="schematicZoomOutBtn" title="Zoom schematic out">−</button>
+            <button id="schematicZoomResetBtn" title="Fit the complete schematic canvas in the viewport">Fit</button>
+            <button id="schematicZoomInBtn" title="Zoom schematic in">＋</button>
             <button id="centerSelectionBtn" title="Scroll to selected component">Center selected</button>
             <button id="clearWiresBtn" title="Delete every schematic wire">Clear wires</button>
             <button id="exportSchematicPngBtn">Export PNG</button>
+            <label class="schematic-option-toggle" for="stickyComponentsInput" title="Automatically connect a component pin when it lands exactly on another pin or schematic wire">
+              <input id="stickyComponentsInput" type="checkbox" checked>
+              <span>Sticky components</span>
+            </label>
           </div>
           <div id="veroViewTools" class="view-tools hidden">
             <button id="undoVeroBtn" title="Undo the last Vero edit" disabled>Undo edit</button>
@@ -862,7 +1001,7 @@
             <button id="zoomOutBtn" title="Zoom out">−</button>
             <button id="zoomResetBtn" title="Fit the complete board in the viewport">Fit</button>
             <button id="zoomInBtn" title="Zoom in">＋</button>
-            <button id="exportSvgBtn">Export SVG</button>
+            <button id="exportBomBtn" title="Download a quantity-grouped bill of materials">Export BOM</button>
             <button id="exportPngBtn">Export PNG</button>
           </div>
         </nav>
@@ -960,6 +1099,7 @@
           </div>
         </section>
       </aside>
+      <button id="rightSidebarNotch" class="right-sidebar-notch" type="button" title="Hide right sidebar" aria-label="Hide right sidebar" aria-expanded="true">›</button>
     </main>
 
     <footer class="statusbar">
@@ -997,10 +1137,10 @@
         <li>The copper-strip colors recalculate after every valid edit. Red strip coloring means the physical edit has shorted two schematic nets; the Vero editor panel also reports split nets.</li>
       </ol>
       <h3>Useful shortcuts</h3>
-      <p><code>Ctrl/Cmd+A</code> selects every schematic component, <code>Ctrl/Cmd+click</code> toggles individual components in the selection, <code>Delete</code> removes the selected component/s, <code>R</code> rotates a selected part or the active placement preview, and <code>Esc</code> cancels the active action. On the Vero page, <code>Ctrl/Cmd+Z</code> and <code>Ctrl/Cmd+Y</code> undo and redo manual layout edits.</p>
+      <p><code>F1</code> selects the Select tool, <code>F2</code> selects the Wire tool, <code>Ctrl/Cmd+A</code> selects every schematic component, <code>Ctrl/Cmd+click</code> toggles individual components in the selection, <code>Ctrl/Cmd+C</code> copies the selection, <code>Ctrl/Cmd+V</code> pastes it, <code>Delete</code> removes the selected component/s, <code>R</code> rotates a selected part or the active placement preview, <code>F</code> flips/mirrors the selected component/s, and <code>Esc</code> cancels the active action without changing tools. On the Vero page, <code>Ctrl/Cmd+Z</code> and <code>Ctrl/Cmd+Y</code> undo and redo manual layout edits.</p>
       <h3>Manufacturing note</h3>
       <p>The generated board is a deterministic heuristic proposal, not a substitute for electrical-rule checking. Verify pinouts, strip cuts, component packages, current ratings, clearances, and polarity before building hardware.</p>
-      <p class="help-version">Vero Designer Version 1.0.40</p>
+      <p class="help-version">Vero Designer Version 1.1.0</p>
     </div>
   </dialog>
 
@@ -1048,14 +1188,15 @@
         },
         potentiometer: {
           name: "Variable resistor / potentiometer",
-          prefix: "POT",
+          prefix: "VR",
           defaultValue: "pot",
-          externalOnly: true,
-          bounds: { x: -76, y: -42, width: 152, height: 126 },
+          defaultResistance: "100k",
+          defaultPotType: "pot",
+          bounds: { x: -66, y: -42, width: 132, height: 146 },
           pins: [
-            { name: "1", x: -70, y: 0, labelX: -57, labelY: 17 },
-            { name: "2", x: 0, y: 70, labelX: 12, labelY: 57 },
-            { name: "3", x: 70, y: 0, labelX: 57, labelY: 17 }
+            { name: "1", x: -60, y: 0, labelX: -48, labelY: 16 },
+            { name: "2", x: 0, y: 60, labelX: 12, labelY: 49 },
+            { name: "3", x: 60, y: 0, labelX: 48, labelY: 16 }
           ]
         },
         capacitor: {
@@ -1082,24 +1223,24 @@
           name: "BJT NPN transistor",
           prefix: "Q",
           defaultValue: "BC547",
-          bounds: { x: -44, y: -40, width: 92, height: 112 },
+          bounds: { x: -48, y: -36, width: 96, height: 94 },
           pins: [
-            { name: "B", x: -36, y: 0, labelX: -29, labelY: 10 },
-            { name: "C", x: 27, y: -30, labelX: 18, labelY: -25 },
-            { name: "E", x: 27, y: 30, labelX: 18, labelY: 25 }
+            { name: "B", x: -40, y: 0, labelX: -32, labelY: 11 },
+            { name: "C", x: 20, y: -20, labelX: 12, labelY: -14 },
+            { name: "E", x: 20, y: 20, labelX: 12, labelY: 28 }
           ]
         },
         opamp: {
           name: "Op-amp, section A",
           prefix: "U",
           defaultValue: "TL072",
-          bounds: { x: -72, y: -78, width: 150, height: 156 },
+          bounds: { x: -66, y: -66, width: 132, height: 132 },
           pins: [
-            { name: "IN−", x: -70, y: -25, labelX: -55, labelY: -12 },
-            { name: "IN+", x: -70, y: 25, labelX: -55, labelY: 38 },
-            { name: "OUT", x: 75, y: 0, labelX: 57, labelY: 16 },
-            { name: "V+", x: 0, y: -75, labelX: 12, labelY: -60 },
-            { name: "V−", x: 0, y: 75, labelX: 12, labelY: 61 }
+            { name: "IN−", x: -60, y: -20, labelX: -48, labelY: -9 },
+            { name: "IN+", x: -60, y: 20, labelX: -48, labelY: 31 },
+            { name: "OUT", x: 60, y: 0, labelX: 48, labelY: 15 },
+            { name: "V+", x: 0, y: -60, labelX: 11, labelY: -48 },
+            { name: "V−", x: 0, y: 60, labelX: 11, labelY: 49 }
           ]
         },
         diode: {
@@ -1126,11 +1267,11 @@
           name: "78L05 voltage regulator",
           prefix: "REG",
           defaultValue: "78L05",
-          bounds: { x: -76, y: -48, width: 152, height: 126 },
+          bounds: { x: -66, y: -42, width: 132, height: 108 },
           pins: [
-            { name: "I", signal: "pin 3 — input", number: "3", x: -70, y: 0, labelX: -57, labelY: 17 },
-            { name: "G", signal: "pin 2 — ground", number: "2", x: 0, y: 70, labelX: 12, labelY: 57 },
-            { name: "O", signal: "pin 1 — output", number: "1", x: 70, y: 0, labelX: 57, labelY: 17 }
+            { name: "I", signal: "pin 3 — input", number: "3", x: -60, y: 0, labelX: -48, labelY: 16 },
+            { name: "G", signal: "pin 2 — ground", number: "2", x: 0, y: 60, labelX: 12, labelY: 49 },
+            { name: "O", signal: "pin 1 — output", number: "1", x: 60, y: 0, labelX: 48, labelY: 16 }
           ]
         },
         jumper: {
@@ -1148,10 +1289,10 @@
           prefix: "SW",
           defaultValue: "switch",
           externalOnly: true,
-          bounds: { x: -76, y: -45, width: 152, height: 90 },
+          bounds: { x: -66, y: -42, width: 132, height: 84 },
           pins: [
-            { name: "1", x: -70, y: 0, labelX: -57, labelY: 17 },
-            { name: "2", x: 70, y: 0, labelX: 57, labelY: 17 }
+            { name: "1", x: -60, y: 0, labelX: -48, labelY: 16 },
+            { name: "2", x: 60, y: 0, labelX: 48, labelY: 16 }
           ]
         },
         otherIC: {
@@ -1195,33 +1336,33 @@
           name: "BJT NPN transistor",
           shortName: "NPN",
           defaultValue: "BC547",
-          bounds: { x: -44, y: -40, width: 92, height: 112 },
+          bounds: { x: -48, y: -36, width: 96, height: 94 },
           pins: [
-            { name: "B", x: -36, y: 0, labelX: -29, labelY: 10 },
-            { name: "C", x: 27, y: -30, labelX: 18, labelY: -25 },
-            { name: "E", x: 27, y: 30, labelX: 18, labelY: 25 }
+            { name: "B", x: -40, y: 0, labelX: -32, labelY: 11 },
+            { name: "C", x: 20, y: -20, labelX: 12, labelY: -14 },
+            { name: "E", x: 20, y: 20, labelX: 12, labelY: 28 }
           ]
         }),
         pnp: Object.freeze({
           name: "BJT PNP transistor",
           shortName: "PNP",
           defaultValue: "BC557",
-          bounds: { x: -44, y: -40, width: 92, height: 112 },
+          bounds: { x: -48, y: -36, width: 96, height: 94 },
           pins: [
-            { name: "B", x: -36, y: 0, labelX: -29, labelY: 10 },
-            { name: "E", x: 27, y: -30, labelX: 18, labelY: -25 },
-            { name: "C", x: 27, y: 30, labelX: 18, labelY: 25 }
+            { name: "B", x: -40, y: 0, labelX: -32, labelY: 11 },
+            { name: "E", x: 20, y: -20, labelX: 12, labelY: -14 },
+            { name: "C", x: 20, y: 20, labelX: 12, labelY: 28 }
           ]
         }),
         jfet: Object.freeze({
           name: "jFET transistor",
           shortName: "jFET",
           defaultValue: "J201",
-          bounds: { x: -44, y: -40, width: 92, height: 112 },
+          bounds: { x: -48, y: -36, width: 96, height: 94 },
           pins: [
-            { name: "G", x: -36, y: 0, labelX: -29, labelY: 10 },
-            { name: "D", x: 27, y: -30, labelX: 18, labelY: -25 },
-            { name: "S", x: 27, y: 30, labelX: 18, labelY: 25 }
+            { name: "G", x: -40, y: 0, labelX: -32, labelY: 11 },
+            { name: "D", x: 20, y: -20, labelX: 12, labelY: -14 },
+            { name: "S", x: 20, y: 20, labelX: 12, labelY: 28 }
           ]
         })
       });
@@ -1238,13 +1379,13 @@
           defaultValue: "LM741",
           packageLabel: "LM741",
           defaultSection: "A",
-          bounds: { x: -72, y: -78, width: 150, height: 156 },
+          bounds: { x: -66, y: -66, width: 132, height: 132 },
           pins: [
-            { name: "IN−", physical: "2", x: -70, y: -25, labelX: -55, labelY: -12 },
-            { name: "IN+", physical: "3", x: -70, y: 25, labelX: -55, labelY: 38 },
-            { name: "OUT", physical: "6", x: 75, y: 0, labelX: 57, labelY: 16 },
-            { name: "V+", physical: "7", x: 0, y: -75, labelX: 12, labelY: -60 },
-            { name: "V−", physical: "4", x: 0, y: 75, labelX: 12, labelY: 61 }
+            { name: "IN−", physical: "2", x: -60, y: -20, labelX: -48, labelY: -9 },
+            { name: "IN+", physical: "3", x: -60, y: 20, labelX: -48, labelY: 31 },
+            { name: "OUT", physical: "6", x: 60, y: 0, labelX: 48, labelY: 15 },
+            { name: "V+", physical: "7", x: 0, y: -60, labelX: 11, labelY: -48 },
+            { name: "V−", physical: "4", x: 0, y: 60, labelX: 11, labelY: 49 }
           ]
         }),
         doubleA: Object.freeze({
@@ -1252,13 +1393,13 @@
           defaultValue: "TL072",
           packageLabel: "TL072",
           section: "A",
-          bounds: { x: -72, y: -78, width: 150, height: 156 },
+          bounds: { x: -66, y: -66, width: 132, height: 132 },
           pins: [
-            { name: "IN−", physical: "2", x: -70, y: -25, labelX: -55, labelY: -12 },
-            { name: "IN+", physical: "3", x: -70, y: 25, labelX: -55, labelY: 38 },
-            { name: "OUT", physical: "1", x: 75, y: 0, labelX: 57, labelY: 16 },
-            { name: "V+", physical: "8", x: 0, y: -75, labelX: 12, labelY: -60 },
-            { name: "V−", physical: "4", x: 0, y: 75, labelX: 12, labelY: 61 }
+            { name: "IN−", physical: "2", x: -60, y: -20, labelX: -48, labelY: -9 },
+            { name: "IN+", physical: "3", x: -60, y: 20, labelX: -48, labelY: 31 },
+            { name: "OUT", physical: "1", x: 60, y: 0, labelX: 48, labelY: 15 },
+            { name: "V+", physical: "8", x: 0, y: -60, labelX: 11, labelY: -48 },
+            { name: "V−", physical: "4", x: 0, y: 60, labelX: 11, labelY: 49 }
           ]
         }),
         doubleB: Object.freeze({
@@ -1266,31 +1407,47 @@
           defaultValue: "TL072",
           packageLabel: "TL072",
           section: "B",
-          bounds: { x: -72, y: -62, width: 150, height: 124 },
+          bounds: { x: -66, y: -48, width: 132, height: 96 },
           pins: [
-            { name: "IN−", physical: "6", x: -70, y: -25, labelX: -55, labelY: -12 },
-            { name: "IN+", physical: "5", x: -70, y: 25, labelX: -55, labelY: 38 },
-            { name: "OUT", physical: "7", x: 75, y: 0, labelX: 57, labelY: 16 }
+            { name: "IN−", physical: "6", x: -60, y: -20, labelX: -48, labelY: -9 },
+            { name: "IN+", physical: "5", x: -60, y: 20, labelX: -48, labelY: 31 },
+            { name: "OUT", physical: "7", x: 60, y: 0, labelX: 48, labelY: 15 }
           ]
         })
       });
 
       const TRANSISTOR_MODEL_OPTIONS = Object.freeze({
-        npn: Object.freeze(["BC547", "2N3904"]),
-        pnp: Object.freeze(["BC557", "2N3906"]),
-        jfet: Object.freeze(["J201", "2N5457", "2N5459"])
+        npn: Object.freeze(["BC547", "BC548", "BC549", "BC550", "2N3904"]),
+        pnp: Object.freeze(["BC557", "BC558", "BC559", "BC560", "2N3906"]),
+        jfet: Object.freeze(["J201", "2N5457", "2N5458", "2N5459"])
       });
 
-      // Lead order is listed from left to right with the flat face toward the
-      // builder. Reversing the package is handled by the mirrored footprint.
+      // Lead order is listed from left to right while looking at the flat face
+      // of a TO-92 package. Family matching below also recognizes gain suffixes
+      // and common vendor suffixes, e.g. BC549C or 2N3904TA.
       const TRANSISTOR_MODEL_PIN_ORDERS = Object.freeze({
+        BC546: Object.freeze(["C", "B", "E"]),
         BC547: Object.freeze(["C", "B", "E"]),
+        BC548: Object.freeze(["C", "B", "E"]),
+        BC549: Object.freeze(["C", "B", "E"]),
+        BC550: Object.freeze(["C", "B", "E"]),
+        BC556: Object.freeze(["C", "B", "E"]),
         BC557: Object.freeze(["C", "B", "E"]),
+        BC558: Object.freeze(["C", "B", "E"]),
+        BC559: Object.freeze(["C", "B", "E"]),
+        BC560: Object.freeze(["C", "B", "E"]),
         "2N3904": Object.freeze(["E", "B", "C"]),
         "2N3906": Object.freeze(["E", "B", "C"]),
         J201: Object.freeze(["D", "S", "G"]),
         "2N5457": Object.freeze(["D", "S", "G"]),
+        "2N5458": Object.freeze(["D", "S", "G"]),
         "2N5459": Object.freeze(["D", "S", "G"])
+      });
+
+      const DIODE_MODEL_OPTIONS = Object.freeze({
+        standard: Object.freeze(["1N4148", "1N4001"]),
+        schottky: Object.freeze(["1N5817", "1N5819"]),
+        zener: Object.freeze(["1N4733A", "1N4742A"])
       });
 
       const OPAMP_MODEL_OPTIONS = Object.freeze({
@@ -1301,41 +1458,65 @@
       const SWITCH_KIND_DEFS = Object.freeze({
         spst: Object.freeze({
           name: "SPST switch", shortName: "SPST",
-          bounds: { x: -76, y: -45, width: 152, height: 90 },
+          bounds: { x: -66, y: -42, width: 132, height: 84 },
           pins: [
-            { name: "1", x: -70, y: 0, labelX: -57, labelY: 17 },
-            { name: "2", x: 70, y: 0, labelX: 57, labelY: 17 }
+            { name: "1", x: -60, y: 0, labelX: -48, labelY: 16 },
+            { name: "2", x: 60, y: 0, labelX: 48, labelY: 16 }
           ]
         }),
         spdt: Object.freeze({
           name: "SPDT switch", shortName: "SPDT",
-          bounds: { x: -76, y: -62, width: 152, height: 124 },
+          bounds: { x: -66, y: -48, width: 132, height: 96 },
           pins: [
-            { name: "1", x: -70, y: 0, labelX: -57, labelY: 17 },
-            { name: "2", x: 70, y: -30, labelX: 57, labelY: -13 },
-            { name: "3", x: 70, y: 30, labelX: 57, labelY: 47 }
+            { name: "1", x: -60, y: 0, labelX: -48, labelY: 16 },
+            { name: "2", x: 60, y: -20, labelX: 48, labelY: -8 },
+            { name: "3", x: 60, y: 20, labelX: 48, labelY: 32 }
+          ]
+        }),
+        sp3t: Object.freeze({
+          name: "SP3T switch", shortName: "SP3T",
+          bounds: { x: -66, y: -78, width: 132, height: 156 },
+          pins: [
+            { name: "1", x: -60, y: 0, labelX: -48, labelY: 16 },
+            { name: "2", x: 60, y: -40, labelX: 48, labelY: -28 },
+            { name: "3", x: 60, y: 0, labelX: 48, labelY: 12 },
+            { name: "4", x: 60, y: 40, labelX: 48, labelY: 52 }
           ]
         }),
         dpst: Object.freeze({
           name: "DPST switch", shortName: "DPST",
-          bounds: { x: -76, y: -68, width: 152, height: 136 },
+          bounds: { x: -66, y: -56, width: 132, height: 112 },
           pins: [
-            { name: "1", x: -70, y: -30, labelX: -57, labelY: -13 },
-            { name: "2", x: 70, y: -30, labelX: 57, labelY: -13 },
-            { name: "3", x: -70, y: 30, labelX: -57, labelY: 47 },
-            { name: "4", x: 70, y: 30, labelX: 57, labelY: 47 }
+            { name: "1", x: -60, y: -20, labelX: -48, labelY: -8 },
+            { name: "2", x: 60, y: -20, labelX: 48, labelY: -8 },
+            { name: "3", x: -60, y: 20, labelX: -48, labelY: 32 },
+            { name: "4", x: 60, y: 20, labelX: 48, labelY: 32 }
           ]
         }),
         dpdt: Object.freeze({
           name: "DPDT switch", shortName: "DPDT",
-          bounds: { x: -76, y: -86, width: 152, height: 172 },
+          bounds: { x: -66, y: -72, width: 132, height: 144 },
           pins: [
-            { name: "1", x: -70, y: -35, labelX: -57, labelY: -18 },
-            { name: "2", x: 70, y: -55, labelX: 57, labelY: -38 },
-            { name: "3", x: 70, y: -15, labelX: 57, labelY: 2 },
-            { name: "4", x: -70, y: 35, labelX: -57, labelY: 52 },
-            { name: "5", x: 70, y: 15, labelX: 57, labelY: 32 },
-            { name: "6", x: 70, y: 55, labelX: 57, labelY: 72 }
+            { name: "1", x: -60, y: -40, labelX: -48, labelY: -28 },
+            { name: "2", x: 60, y: -60, labelX: 48, labelY: -48 },
+            { name: "3", x: 60, y: -20, labelX: 48, labelY: -8 },
+            { name: "4", x: -60, y: 40, labelX: -48, labelY: 52 },
+            { name: "5", x: 60, y: 20, labelX: 48, labelY: 32 },
+            { name: "6", x: 60, y: 60, labelX: 48, labelY: 72 }
+          ]
+        }),
+        dp3t: Object.freeze({
+          name: "DP3T switch", shortName: "DP3T",
+          bounds: { x: -66, y: -128, width: 132, height: 256 },
+          pins: [
+            { name: "1", x: -60, y: -60, labelX: -48, labelY: -44 },
+            { name: "2", x: 60, y: -100, labelX: 48, labelY: -88 },
+            { name: "3", x: 60, y: -60, labelX: 48, labelY: -48 },
+            { name: "4", x: 60, y: -20, labelX: 48, labelY: -8 },
+            { name: "5", x: -60, y: 60, labelX: -48, labelY: 76 },
+            { name: "6", x: 60, y: 20, labelX: 48, labelY: 32 },
+            { name: "7", x: 60, y: 60, labelX: 48, labelY: 72 },
+            { name: "8", x: 60, y: 100, labelX: 48, labelY: 112 }
           ]
         })
       });
@@ -1364,12 +1545,15 @@
         pointerInSchematic: false,
         schematicPreviewFrame: 0,
         placementRotation: 0,
+        schematicClipboard: null,
+        pasteSerial: 0,
         drag: null,
         history: [],
         future: [],
         view: "schematic",
         rightTab: "nets",
         veroLayout: null,
+        schematicZoom: 1,
         veroZoom: 1,
         veroGeometry: null,
         veroSelection: null,
@@ -1379,6 +1563,10 @@
         veroManualEdited: false,
         schematicChangedSinceVero: false,
         isGenerating: false,
+        rightSidebarCollapsed: false,
+        schematicSettings: {
+          stickyComponents: true
+        },
         boardSettings: {
           maxColumns: 20,
           busSpacing: 1,
@@ -1402,6 +1590,10 @@
         veroTab: document.getElementById("veroTab"),
         schematicViewTools: document.getElementById("schematicViewTools"),
         veroViewTools: document.getElementById("veroViewTools"),
+        schematicZoomOutBtn: document.getElementById("schematicZoomOutBtn"),
+        schematicZoomResetBtn: document.getElementById("schematicZoomResetBtn"),
+        schematicZoomInBtn: document.getElementById("schematicZoomInBtn"),
+        stickyComponentsInput: document.getElementById("stickyComponentsInput"),
         statusMessage: document.getElementById("statusMessage"),
         selectionStatus: document.getElementById("selectionStatus"),
         cursorStatus: document.getElementById("cursorStatus"),
@@ -1410,10 +1602,18 @@
         propId: document.getElementById("propId"),
         propValue: document.getElementById("propValue"),
         propValueLabel: document.getElementById("propValueLabel"),
+        potTypeField: document.getElementById("potTypeField"),
+        propPotType: document.getElementById("propPotType"),
+        potResistanceField: document.getElementById("potResistanceField"),
+        propPotResistance: document.getElementById("propPotResistance"),
         transistorTypeField: document.getElementById("transistorTypeField"),
         propTransistorType: document.getElementById("propTransistorType"),
         transistorModelField: document.getElementById("transistorModelField"),
         propTransistorModel: document.getElementById("propTransistorModel"),
+        diodeTypeField: document.getElementById("diodeTypeField"),
+        propDiodeType: document.getElementById("propDiodeType"),
+        diodeModelField: document.getElementById("diodeModelField"),
+        propDiodeModel: document.getElementById("propDiodeModel"),
         opampTypeField: document.getElementById("opampTypeField"),
         propOpampType: document.getElementById("propOpampType"),
         opampModelField: document.getElementById("opampModelField"),
@@ -1431,6 +1631,9 @@
         netScopeField: document.getElementById("netScopeField"),
         propNetScope: document.getElementById("propNetScope"),
         propRotation: document.getElementById("propRotation"),
+        flipMirrorBtn: document.getElementById("flipMirrorBtn"),
+        copySchematicBtn: document.getElementById("copySchematicBtn"),
+        pasteSchematicBtn: document.getElementById("pasteSchematicBtn"),
         pinTableBody: document.getElementById("pinTableBody"),
         netList: document.getElementById("netList"),
         dataView: document.getElementById("dataView"),
@@ -1467,6 +1670,8 @@
         appMessageConfirm: document.getElementById("appMessageConfirm"),
         leftSidebar: document.getElementById("leftSidebar"),
         rightSidebar: document.getElementById("rightSidebar"),
+        workspaceShell: document.getElementById("workspaceShell"),
+        rightSidebarNotch: document.getElementById("rightSidebarNotch"),
         zoomResetBtn: document.getElementById("zoomResetBtn"),
         undoVeroBtn: document.getElementById("undoVeroBtn"),
         redoVeroBtn: document.getElementById("redoVeroBtn"),
@@ -1620,19 +1825,74 @@
         return [...(TRANSISTOR_MODEL_OPTIONS[canonicalTransistorKind(kind)] || TRANSISTOR_MODEL_OPTIONS.npn)];
       }
 
-      function transistorKindForModel(model) {
+      function transistorFamilyData(model) {
         const normalized = normalizedPartModel(model);
-        for (const [kind, models] of Object.entries(TRANSISTOR_MODEL_OPTIONS)) {
-          if (models.some(candidate => normalizedPartModel(candidate) === normalized)) return kind;
+        if (!normalized) return null;
+
+        const exactKey = Object.keys(TRANSISTOR_MODEL_PIN_ORDERS)
+          .find(key => normalizedPartModel(key) === normalized);
+        if (exactKey) {
+          const order = [...TRANSISTOR_MODEL_PIN_ORDERS[exactKey]];
+          const kind = order.includes("G") ? "jfet" : ["BC556","BC557","BC558","BC559","BC560","2N3906"].includes(exactKey) ? "pnp" : "npn";
+          return { kind, order, family: exactKey, recognized: true };
         }
+
+        // Recognize common suffixes and manufacturer/package suffixes without
+        // requiring the exact text to be present in the model drop-down.
+        const bcNpn = normalized.match(/^BC(546|547|548|549|550)[A-Z0-9-]*$/);
+        if (bcNpn) return { kind: "npn", order: ["C", "B", "E"], family: `BC${bcNpn[1]}`, recognized: true };
+        const bcPnp = normalized.match(/^BC(556|557|558|559|560)[A-Z0-9-]*$/);
+        if (bcPnp) return { kind: "pnp", order: ["C", "B", "E"], family: `BC${bcPnp[1]}`, recognized: true };
+        if (/^2N3904[A-Z0-9-]*$/.test(normalized)) return { kind: "npn", order: ["E", "B", "C"], family: "2N3904", recognized: true };
+        if (/^2N3906[A-Z0-9-]*$/.test(normalized)) return { kind: "pnp", order: ["E", "B", "C"], family: "2N3906", recognized: true };
+        if (/^J201[A-Z0-9-]*$/.test(normalized)) return { kind: "jfet", order: ["D", "S", "G"], family: "J201", recognized: true };
+        const jfet = normalized.match(/^2N545(7|8|9)[A-Z0-9-]*$/);
+        if (jfet) return { kind: "jfet", order: ["D", "S", "G"], family: `2N545${jfet[1]}`, recognized: true };
         return null;
       }
 
+      function transistorKindForModel(model) {
+        return transistorFamilyData(model)?.kind || null;
+      }
+
+      function validTransistorPinout(order, kind) {
+        if (!Array.isArray(order) || order.length !== 3) return false;
+        const expected = kind === "jfet" ? ["D", "S", "G"] : ["C", "B", "E"];
+        return expected.every(pin => order.includes(pin)) && new Set(order).size === 3;
+      }
+
       function transistorLeadOrder(component) {
-        const normalized = normalizedPartModel(component?.value);
-        const exactKey = Object.keys(TRANSISTOR_MODEL_PIN_ORDERS).find(key => normalizedPartModel(key) === normalized);
-        if (exactKey) return [...TRANSISTOR_MODEL_PIN_ORDERS[exactKey]];
-        return transistorKindOf(component) === "jfet" ? ["D", "S", "G"] : ["C", "B", "E"];
+        const kind = transistorKindOf(component);
+        const family = transistorFamilyData(component?.value);
+        // A recognized model is authoritative. This repairs older projects
+        // that saved an incorrect transistorPinout array before model-aware
+        // package orientation was introduced.
+        if (family && validTransistorPinout(family.order, family.kind)) return [...family.order];
+        if (validTransistorPinout(component?.transistorPinout, kind)) return [...component.transistorPinout];
+        return kind === "jfet" ? ["D", "S", "G"] : ["C", "B", "E"];
+      }
+
+      function canonicalDiodeKind(value) {
+        const key = String(value || "").trim().replace(/[\s_-]+/g, "").toLowerCase();
+        if (["schottky", "schottkydiode"].includes(key)) return "schottky";
+        if (["zener", "zenerdiode"].includes(key)) return "zener";
+        return "standard";
+      }
+
+      function inferredDiodeKindFromModel(model) {
+        const normalized = normalizedPartModel(model);
+        if (["1N5817", "1N5818", "1N5819"].includes(normalized)) return "schottky";
+        if (/^1N47\d{2}A$/.test(normalized) || /^BZX/i.test(normalized) || /^1N52\d{2}B$/.test(normalized)) return "zener";
+        return null;
+      }
+
+      function diodeKindOf(component) {
+        if (!component || canonicalComponentType(component.type) !== "diode") return "standard";
+        return canonicalDiodeKind(component.diodeKind || inferredDiodeKindFromModel(component.value));
+      }
+
+      function diodeModelsForKind(kind) {
+        return [...(DIODE_MODEL_OPTIONS[canonicalDiodeKind(kind)] || DIODE_MODEL_OPTIONS.standard)];
       }
 
       function canonicalOpampKind(value) {
@@ -1693,7 +1953,7 @@
 
       function canonicalSwitchKind(value) {
         const key = String(value || "").trim().replace(/[\s_-]+/g, "").toLowerCase();
-        return ["spst", "spdt", "dpst", "dpdt"].includes(key) ? key : "spst";
+        return ["spst", "spdt", "sp3t", "dpst", "dpdt", "dp3t"].includes(key) ? key : "spst";
       }
 
       function switchKindOf(component) {
@@ -1729,10 +1989,18 @@
         return canonicalLedColor(component?.ledColor);
       }
 
+      function canonicalPotType(value) {
+        return String(value || "").trim().toLowerCase() === "trimmer" ? "trimmer" : "pot";
+      }
+
+      function potTypeOf(component) {
+        return canonicalPotType(component?.potType);
+      }
+
       function isOffboardComponent(componentOrType) {
         const component = typeof componentOrType === "string" ? null : componentOrType;
         const type = canonicalComponentType(typeof componentOrType === "string" ? componentOrType : componentOrType?.type);
-        return type === "potentiometer" || type === "switch" || (type === "led" && ledScopeOf(component) === "offboard");
+        return (type === "potentiometer" && potTypeOf(component) === "pot") || type === "switch" || (type === "led" && ledScopeOf(component) === "offboard");
       }
 
       function isBoardPhysicalComponent(component) {
@@ -1748,6 +2016,31 @@
 
       function terminalScopeOf(component) {
         return component?.netScope === "onboard" ? "onboard" : "offboard";
+      }
+
+      function terminalComponentsForLabel(label, components = state.components) {
+        const normalized = normalizeNetLabel(label);
+        return components.filter(component => component.type === "terminal" && normalizeNetLabel(component.value) === normalized);
+      }
+
+      function commonTerminalScope(label, components = state.components) {
+        const matches = terminalComponentsForLabel(label, components);
+        if (!matches.length) return "offboard";
+        // Onboard wins when repairing an older project that contains mixed
+        // settings, preventing an unexpected external connection from being added.
+        return matches.some(component => terminalScopeOf(component) === "onboard") ? "onboard" : "offboard";
+      }
+
+      function setTerminalScopeForLabel(label, scope, components = state.components) {
+        const nextScope = scope === "onboard" ? "onboard" : "offboard";
+        for (const component of terminalComponentsForLabel(label, components)) component.netScope = nextScope;
+        return nextScope;
+      }
+
+      function synchronizeAllTerminalScopes(components = state.components) {
+        const labels = new Set(components.filter(component => component.type === "terminal").map(component => normalizeNetLabel(component.value)));
+        for (const label of labels) setTerminalScopeForLabel(label, commonTerminalScope(label, components), components);
+        return components;
       }
 
       function selectedComponentIds() {
@@ -1784,7 +2077,6 @@
 
       function selectAllSchematicComponents() {
         if (!state.components.length) return;
-        if (state.tool !== "select") setTool("select");
         state.pendingWirePin = null;
         state.selectedComponentIds = state.components.map(component => component.id);
         state.selected = { kind: "component", id: state.selectedComponentIds[0] };
@@ -1797,9 +2089,19 @@
         const type = canonicalComponentType(rawType);
         const normalized = { ...component, type };
         normalized.instanceUid = String(component?.instanceUid || "").trim() || uid("CMP");
+        normalized.mirrored = Boolean(component?.mirrored);
         if (type === "transistor") {
-          const inferredKind = transistorKindForModel(component?.value);
-          normalized.transistorKind = inferredKind || canonicalTransistorKind(component?.transistorKind || rawType);
+          const family = transistorFamilyData(component?.value);
+          normalized.transistorKind = family?.kind || canonicalTransistorKind(component?.transistorKind || rawType);
+          normalized.transistorPinout = family?.order
+            ? [...family.order]
+            : validTransistorPinout(component?.transistorPinout, normalized.transistorKind)
+              ? [...component.transistorPinout]
+              : normalized.transistorKind === "jfet" ? ["D", "S", "G"] : ["C", "B", "E"];
+        }
+        if (type === "diode") {
+          normalized.diodeKind = canonicalDiodeKind(component?.diodeKind || inferredDiodeKindFromModel(component?.value));
+          if (!String(normalized.value || "").trim()) normalized.value = DIODE_MODEL_OPTIONS[normalized.diodeKind][0];
         }
         if (type === "opamp") {
           normalized.opampKind = canonicalOpampKind(component?.opampKind || (String(component?.value || "").toUpperCase().includes("LM741") ? "single" : "double"));
@@ -1820,7 +2122,14 @@
           normalized.ledScope = ledScopeOf(component);
           normalized.ledColor = ledColorOf(component);
         }
-        if (type === "potentiometer" && !String(normalized.value || "").trim()) normalized.value = String(normalized.id || "pot").toLowerCase();
+        if (type === "potentiometer") {
+          if (!String(normalized.value || "").trim()) {
+            const number = String(normalized.id || "").match(/(\d+)/)?.[1] || "1";
+            normalized.value = `pot${number}`;
+          }
+          normalized.potType = canonicalPotType(component?.potType);
+          normalized.potResistance = String(component?.potResistance || TYPE_DEFS.potentiometer.defaultResistance).trim() || TYPE_DEFS.potentiometer.defaultResistance;
+        }
         if (type === "switch" && !String(normalized.value || "").trim()) normalized.value = String(normalized.id || "switch").toLowerCase().replace(/^sw/, "switch");
         if (type === "terminal") normalized.netScope = terminalScopeOf(component);
         return normalized;
@@ -1858,6 +2167,16 @@
         if (type === "switch" && typeof componentOrType !== "string") return SWITCH_KIND_DEFS[switchKindOf(componentOrType)];
         if (type === "otherIC" && typeof componentOrType !== "string") return OTHER_IC_DEFS[otherIcModelOf(componentOrType)];
         if (type === "voltageRegulator" && typeof componentOrType !== "string") return TYPE_DEFS.voltageRegulator;
+        if (type === "terminal" && typeof componentOrType !== "string") {
+          const base = TYPE_DEFS.terminal;
+          const inputFacesRight = normalizeNetLabel(componentOrType.value) === "INPUT";
+          return {
+            ...base,
+            bounds: inputFacesRight
+              ? { x: -96, y: -28, width: 108, height: 56 }
+              : { x: -12, y: -28, width: 108, height: 56 }
+          };
+        }
         return TYPE_DEFS[type];
       }
 
@@ -1886,7 +2205,8 @@
         const def = componentDef(component);
         const pin = def.pins.find(item => item.name === pinName);
         if (!pin) return null;
-        const rotated = rotatePoint(pin.x, pin.y, component.rotation || 0);
+        const localX = component?.mirrored ? -pin.x : pin.x;
+        const rotated = rotatePoint(localX, pin.y, component.rotation || 0);
         return { x: component.x + rotated.x, y: component.y + rotated.y };
       }
 
@@ -1899,6 +2219,56 @@
           b: String(wire?.b || ""),
           ...(style ? { routeStyle: style } : {}),
           ...(style && Number.isFinite(offset) ? { routeOffset: offset } : {})
+        };
+      }
+
+      function migratePotentiometerIds(components, wires = []) {
+        const usedIds = new Set(components.filter(component => component.type !== "potentiometer").map(component => String(component.id)));
+        const reservedCorrectIds = new Set();
+        for (const component of components.filter(item => item.type === "potentiometer")) {
+          const id = String(component.id || "");
+          if (/^VR\d+$/i.test(id) && !usedIds.has(id.toUpperCase()) && !reservedCorrectIds.has(id.toUpperCase())) {
+            reservedCorrectIds.add(id.toUpperCase());
+          }
+        }
+        for (const id of reservedCorrectIds) usedIds.add(id);
+
+        const idMap = new Map();
+        let nextNumber = 1;
+        const nextFreeId = preferredNumber => {
+          let number = Number(preferredNumber);
+          if (!Number.isFinite(number) || number < 1) number = nextNumber;
+          let candidate = `VR${number}`;
+          while (usedIds.has(candidate.toUpperCase())) candidate = `VR${++number}`;
+          nextNumber = Math.max(nextNumber, number + 1);
+          usedIds.add(candidate.toUpperCase());
+          return candidate;
+        };
+
+        const claimedCorrectIds = new Set();
+        for (const component of components) {
+          if (component.type !== "potentiometer") continue;
+          const oldId = String(component.id || "");
+          const upper = oldId.toUpperCase();
+          let nextIdValue;
+          if (/^VR\d+$/.test(upper) && reservedCorrectIds.has(upper) && !claimedCorrectIds.has(upper)) {
+            nextIdValue = upper;
+            claimedCorrectIds.add(upper);
+          } else {
+            const number = oldId.match(/(\d+)/)?.[1];
+            nextIdValue = nextFreeId(number);
+          }
+          component.id = nextIdValue;
+          if (oldId !== nextIdValue) idMap.set(oldId, nextIdValue);
+        }
+
+        const remapEndpoint = endpoint => {
+          const info = splitPinKey(endpoint);
+          return pinKey(idMap.get(info.componentId) || info.componentId, info.pinName);
+        };
+        return {
+          idMap,
+          wires: wires.map(wire => ({ ...wire, a: remapEndpoint(wire.a), b: remapEndpoint(wire.b) }))
         };
       }
 
@@ -1930,30 +2300,214 @@
         return migrated;
       }
 
-      function projectPayload() {
+      function serializeVeroLayoutForProject(layout = state.veroLayout) {
+        if (!layout || layout.error) return null;
+        const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
+        const serializePlacement = placement => ({
+          componentId: placement.component?.id || "",
+          componentIdentity: componentIdentity(placement.component),
+          component: clone(placement.component),
+          x: placement.x,
+          y: placement.y,
+          footprint: cloneVeroFootprint(placement.footprint)
+        });
         return {
-          format: "Vero Designer",
-          version: 11,
-          components: state.components,
-          wires: state.wires,
-          counters: state.counters,
-          boardSettings: state.boardSettings,
-          projectMeta: state.projectMeta
+          format: "Vero Designer saved layout",
+          version: 1,
+          columns: layout.columns,
+          rows: layout.rows,
+          placements: (layout.placements || []).map(serializePlacement),
+          sourcePlacements: (layout.sourcePlacements || []).map(serializePlacement),
+          routes: (layout.routes || []).map(route => ({
+            node: route.node || "",
+            fromSegment: route.fromSegment || null,
+            toSegment: route.toSegment || null,
+            isRoutingBusLink: Boolean(route.isRoutingBusLink),
+            schematicNetIndex: Number.isFinite(route.schematicNetIndex) ? route.schematicNetIndex : route.net?.index,
+            schematicNetIdentity: route.schematicNetIdentity || route.net?.stableIdentity || "",
+            netName: route.net?.name || route.displayNet?.name || "",
+            points: (route.points || []).map(point => ({ x: point.x, y: point.y }))
+          })),
+          cuts: (layout.cuts || []).map(cut => ({ x: cut.x, y: cut.y, hole: cut.x })),
+          terminals: (layout.terminals || []).map(terminal => ({
+            componentId: terminal.component?.id || "",
+            componentIdentity: componentIdentity(terminal.component),
+            component: clone(terminal.component),
+            schematicNetIndex: terminal.net?.index,
+            schematicNetIdentity: terminal.schematicNetIdentity || terminal.net?.stableIdentity || "",
+            netName: terminal.net?.name || terminal.label || "",
+            side: terminal.side,
+            row: terminal.row,
+            pinName: terminal.pinName || "1",
+            labelOffset: terminal.labelOffset || 0,
+            isOffboardControl: Boolean(terminal.isOffboardControl),
+            key: terminal.key || "",
+            label: terminal.label || ""
+          })),
+          schematicStructureSignature: layout.schematicStructureSignature || "",
+          manualEdited: Boolean(state.veroManualEdited || layout.manualEdited)
         };
       }
 
-      function projectSnapshot() {
-        return JSON.stringify(projectPayload());
+      function deserializeVeroLayoutFromProject(saved) {
+        if (!saved || !Number.isFinite(Number(saved.columns)) || !Number.isFinite(Number(saved.rows))) return null;
+        const clone = value => value == null ? value : JSON.parse(JSON.stringify(value));
+        ensureComponentIdentities(state.components);
+        const netData = deriveNets();
+        for (const net of netData.nets) net.stableIdentity = schematicNetIdentity(net);
+        const activeNets = activeBoardNetsFromNetData(netData);
+        const netByIndex = new Map(netData.nets.map(net => [net.index, net]));
+        const netByIdentity = new Map(netData.nets.map(net => [net.stableIdentity, net]));
+        const netByName = new Map(netData.nets.map(net => [normalizeNetLabel(net.name), net]));
+
+        const boardComponents = buildBoardElectricalComponents();
+        const boardByIdentity = new Map(boardComponents.map(component => [componentIdentity(component), component]));
+        const boardById = new Map(boardComponents.map(component => [component.id, component]));
+        const schematicByIdentity = new Map(state.components.map(component => [componentIdentity(component), component]));
+        const schematicById = new Map(state.components.map(component => [component.id, component]));
+
+        const pinSourcesFor = current => {
+          if (!current) return null;
+          if (current.boardPinSources) return clone(current.boardPinSources);
+          const sources = {};
+          for (const pin of componentDef(current).pins) sources[pin.name] = [pinKey(current.id, pin.name)];
+          return sources;
+        };
+        const restoreBoardComponent = record => {
+          const current = (record.componentIdentity ? boardByIdentity.get(record.componentIdentity) : null) || boardById.get(record.componentId);
+          const restored = clone(record.component || current);
+          if (!restored) return null;
+          const pinSources = pinSourcesFor(current);
+          if (pinSources) restored.boardPinSources = pinSources;
+          if (current) {
+            restored.instanceUid = restored.instanceUid || current.instanceUid;
+            restored.opampPackageUid = restored.opampPackageUid || current.opampPackageUid;
+          }
+          return restored;
+        };
+        const restorePlacement = record => {
+          const component = restoreBoardComponent(record);
+          if (!component || !record.footprint) return null;
+          return {
+            component,
+            x: Math.round(Number(record.x) || 0),
+            y: Math.round(Number(record.y) || 0),
+            footprint: cloneVeroFootprint(record.footprint)
+          };
+        };
+        const resolveNet = record =>
+          (record.schematicNetIdentity ? netByIdentity.get(record.schematicNetIdentity) : null) ||
+          netByIndex.get(record.schematicNetIndex) ||
+          netByName.get(normalizeNetLabel(record.netName || "")) || null;
+
+        const placements = (saved.placements || []).map(restorePlacement).filter(Boolean);
+        if (!placements.length) return null;
+        const sourcePlacements = (saved.sourcePlacements || []).map(restorePlacement).filter(Boolean);
+        const routes = (saved.routes || []).map((record, index) => {
+          const net = resolveNet(record);
+          return {
+            node: record.node || `${net?.name || "NET"} link ${index + 1}`,
+            net,
+            schematicNetIndex: net?.index ?? record.schematicNetIndex,
+            schematicNetIdentity: record.schematicNetIdentity || net?.stableIdentity || "",
+            fromSegment: record.fromSegment || null,
+            toSegment: record.toSegment || null,
+            points: (record.points || []).map(point => ({ x: Math.round(point.x), y: Math.round(point.y) })),
+            isRoutingBusLink: Boolean(record.isRoutingBusLink)
+          };
+        }).filter(route => route.points.length >= 2);
+        const terminals = (saved.terminals || []).map(record => {
+          const current = (record.componentIdentity ? schematicByIdentity.get(record.componentIdentity) : null) || schematicById.get(record.componentId);
+          const component = clone(record.component || current);
+          const net = resolveNet(record);
+          if (!component || !net) return null;
+          return {
+            component,
+            net,
+            schematicNetIdentity: record.schematicNetIdentity || net.stableIdentity || "",
+            side: record.side === "right" ? "right" : "left",
+            row: Math.round(Number(record.row) || 0),
+            pinName: record.pinName || "1",
+            labelOffset: Number(record.labelOffset) || 0,
+            isOffboardControl: Boolean(record.isOffboardControl),
+            key: record.key || (record.isOffboardControl ? `${component.id}:${record.pinName || "1"}` : component.id),
+            label: record.label || (record.isOffboardControl ? `${externalControlName(component)} ${record.pinName || "1"}` : net.name)
+          };
+        }).filter(Boolean);
+
+        const layout = {
+          error: null,
+          columns: clamp(Math.round(Number(saved.columns)), 4, 220),
+          rows: clamp(Math.round(Number(saved.rows)), 4, 160),
+          placements,
+          sourcePlacements: sourcePlacements.length ? sourcePlacements : placements.map(placement => ({
+            component: clone(placement.component), x: placement.x, y: placement.y, footprint: cloneVeroFootprint(placement.footprint)
+          })),
+          routes,
+          cuts: (saved.cuts || []).map(cut => ({ x: Math.round(cut.x), y: Math.round(cut.y), hole: Math.round(cut.x) })),
+          terminals,
+          netData,
+          activeNets,
+          segments: [],
+          busRows: new Map(),
+          doubleLinks: [],
+          totalLinkLength: 0,
+          schematicStructureSignature: saved.schematicStructureSignature || "",
+          manualEdited: Boolean(saved.manualEdited)
+        };
+        attachStableNetIdentities(layout);
+        return layout;
+      }
+
+      function restoreProjectVeroLayout(saved) {
+        const layout = deserializeVeroLayoutFromProject(saved);
+        if (!layout) return false;
+        state.veroLayout = layout;
+        state.veroSelection = null;
+        state.veroDrag = null;
+        state.veroManualEdited = Boolean(saved.manualEdited);
+        state.schematicChangedSinceVero = Boolean(layout.schematicStructureSignature && layout.schematicStructureSignature !== schematicStructureSignature());
+        refreshManualLayoutConnectivity(layout);
+        initializeVeroHistory(layout);
+        layout.manualEdited = state.veroManualEdited;
+        updateVeroEditUi();
+        return true;
+      }
+
+      function projectPayload({ includeVero = true } = {}) {
+        const payload = {
+          format: "Vero Designer",
+          version: 13,
+          components: state.components,
+          wires: state.wires,
+          counters: state.counters,
+          schematicSettings: state.schematicSettings,
+          boardSettings: state.boardSettings,
+          projectMeta: state.projectMeta
+        };
+        if (includeVero) payload.veroLayout = serializeVeroLayoutForProject();
+        return payload;
+      }
+
+      function projectSnapshot({ includeVero = false } = {}) {
+        return JSON.stringify(projectPayload({ includeVero }));
       }
 
       function recordState() {
-        const snapshot = projectSnapshot();
+        // Schematic undo history intentionally excludes the generated layout:
+        // schematic undo already preserves the current editable Vero document,
+        // and duplicating a large board into every history entry wastes memory.
+        const snapshot = projectSnapshot({ includeVero: false });
         if (state.history[state.history.length - 1] !== snapshot) {
           state.history.push(snapshot);
           if (state.history.length > 100) state.history.shift();
         }
         state.future.length = 0;
-        try { localStorage.setItem(AUTOSAVE_KEY, snapshot); } catch (_) { /* localStorage may be unavailable */ }
+        try {
+          // Autosave and explicit project downloads do include the complete
+          // generated/editable Vero layout.
+          localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(projectPayload({ includeVero: true })));
+        } catch (_) { /* localStorage may be unavailable */ }
         updateHistoryButtons();
       }
 
@@ -1965,8 +2519,18 @@
             .filter(component => TYPE_DEFS[component.type])
           : [];
         ensureComponentIdentities(state.components);
-        state.wires = migrateSecondHalfOpampPowerWires(Array.isArray(data.wires) ? data.wires.map(normalizeWireRecord) : [], state.components);
-        state.counters = data.counters && typeof data.counters === "object" ? data.counters : {};
+        synchronizeAllTerminalScopes(state.components);
+        const normalizedWires = Array.isArray(data.wires) ? data.wires.map(normalizeWireRecord) : [];
+        const potMigration = migratePotentiometerIds(state.components, normalizedWires);
+        state.wires = migrateSecondHalfOpampPowerWires(potMigration.wires, state.components);
+        state.counters = data.counters && typeof data.counters === "object" ? { ...data.counters } : {};
+        delete state.counters.POT;
+        const maxVr = state.components.filter(component => component.type === "potentiometer")
+          .reduce((max, component) => Math.max(max, Number(String(component.id).match(/(\d+)/)?.[1]) || 0), 0);
+        state.counters.VR = Math.max(Number(state.counters.VR) || 0, maxVr);
+        state.schematicSettings = {
+          stickyComponents: data.schematicSettings?.stickyComponents !== false
+        };
         state.boardSettings = {
           maxColumns: clamp(Number(data.boardSettings?.maxColumns) || 20, 8, 80),
           busSpacing: Number(data.boardSettings?.busSpacing) === 2 ? 2 : 1,
@@ -1985,7 +2549,7 @@
           state.schematicChangedSinceVero = true;
           state.veroSelection = null;
           state.veroDrag = null;
-        } else {
+        } else if (!restoreProjectVeroLayout(data.veroLayout)) {
           state.veroLayout = null;
           state.veroSelection = null;
           state.veroDrag = null;
@@ -2258,7 +2822,124 @@
         return degrees;
       }
 
-      function addComponent(type, x, y, forcedValue = null, forcedId = null, rotation = 0) {
+      function schematicPinKeysForComponent(component) {
+        return componentDef(component).pins.map(pin => pinKey(component.id, pin.name));
+      }
+
+      function pinsShareSchematicNet(a, b) {
+        const netData = deriveNets();
+        const netA = netData.pinToNet.get(a);
+        const netB = netData.pinToNet.get(b);
+        return Boolean(netA && netB && netA === netB);
+      }
+
+      function schematicWireExists(a, b) {
+        return state.wires.some(wire => (wire.a === a && wire.b === b) || (wire.a === b && wire.b === a));
+      }
+
+      function addSchematicWireWithoutHistory(a, b, route = null) {
+        if (!a || !b || a === b || schematicWireExists(a, b) || pinsShareSchematicNet(a, b)) return false;
+        state.wires.push({
+          id: uid("W"),
+          a,
+          b,
+          ...(route?.routeStyle ? { routeStyle: route.routeStyle } : {}),
+          ...(route?.routeStyle && Number.isFinite(Number(route.routeOffset)) ? { routeOffset: Number(route.routeOffset) } : {})
+        });
+        return true;
+      }
+
+      function pointOnOrthogonalSegment(point, a, b, tolerance = .75) {
+        if (Math.abs(a.x - b.x) <= tolerance) {
+          return Math.abs(point.x - a.x) <= tolerance && point.y >= Math.min(a.y, b.y) - tolerance && point.y <= Math.max(a.y, b.y) + tolerance;
+        }
+        if (Math.abs(a.y - b.y) <= tolerance) {
+          return Math.abs(point.y - a.y) <= tolerance && point.x >= Math.min(a.x, b.x) - tolerance && point.x <= Math.max(a.x, b.x) + tolerance;
+        }
+        return false;
+      }
+
+      function stickyAttachmentForWire(wire, point) {
+        const aInfo = splitPinKey(wire.a);
+        const bInfo = splitPinKey(wire.b);
+        const aComponent = getComponent(aInfo.componentId);
+        const bComponent = getComponent(bInfo.componentId);
+        const start = aComponent ? getPinWorld(aComponent, aInfo.pinName) : null;
+        const end = bComponent ? getPinWorld(bComponent, bInfo.pinName) : null;
+        if (!start || !end) return null;
+        const route = wireRouteDefinition(wire, start, end);
+        for (let index = 0; index < route.points.length - 1; index += 1) {
+          if (!pointOnOrthogonalSegment(point, route.points[index], route.points[index + 1])) continue;
+          if (index === 0) return { endpoint: wire.a, netPin: wire.a };
+          if (index === route.points.length - 2) return { endpoint: wire.b, netPin: wire.b };
+          // A point on the movable middle section can be connected to the first
+          // endpoint using the same route style and offset. The new line lies
+          // exactly over the existing wire until the component is moved again.
+          return {
+            endpoint: wire.a,
+            netPin: wire.a,
+            routeStyle: route.style,
+            routeOffset: route.offset
+          };
+        }
+        return null;
+      }
+
+      function stickyConnectMovedComponents(componentIds) {
+        if (state.schematicSettings?.stickyComponents === false) return { connections: 0, ambiguous: 0 };
+        const movedIds = new Set((componentIds || []).filter(id => Boolean(getComponent(id))));
+        if (!movedIds.size) return { connections: 0, ambiguous: 0 };
+        let connections = 0;
+        let ambiguous = 0;
+
+        for (const componentId of movedIds) {
+          const component = getComponent(componentId);
+          if (!component) continue;
+          for (const pin of componentDef(component).pins) {
+            const sourceKey = pinKey(component.id, pin.name);
+            const sourcePoint = getPinWorld(component, pin.name);
+            if (!sourcePoint) continue;
+            let joinedPin = false;
+
+            // Pin-on-pin joins take priority and are electrically unambiguous.
+            for (const targetComponent of state.components) {
+              if (movedIds.has(targetComponent.id)) continue;
+              for (const targetPin of componentDef(targetComponent).pins) {
+                const targetPoint = getPinWorld(targetComponent, targetPin.name);
+                if (!targetPoint || Math.abs(sourcePoint.x - targetPoint.x) > .75 || Math.abs(sourcePoint.y - targetPoint.y) > .75) continue;
+                const targetKey = pinKey(targetComponent.id, targetPin.name);
+                if (addSchematicWireWithoutHistory(sourceKey, targetKey)) connections += 1;
+                joinedPin = true;
+              }
+            }
+            if (joinedPin) continue;
+
+            // Pin-on-wire joins are accepted only when every wire under the
+            // pin belongs to the same net. At a crossing of two unrelated nets
+            // the app deliberately does nothing rather than create a short.
+            const candidates = [];
+            for (const wire of state.wires) {
+              const aId = splitPinKey(wire.a).componentId;
+              const bId = splitPinKey(wire.b).componentId;
+              if (movedIds.has(aId) || movedIds.has(bId)) continue;
+              const attachment = stickyAttachmentForWire(wire, sourcePoint);
+              if (attachment) candidates.push({ wire, attachment });
+            }
+            if (!candidates.length) continue;
+            const currentNets = deriveNets();
+            const candidateNetIndexes = new Set(candidates.map(candidate => currentNets.pinToNet.get(candidate.attachment.netPin)?.index).filter(Number.isFinite));
+            if (candidateNetIndexes.size > 1) {
+              ambiguous += 1;
+              continue;
+            }
+            const candidate = candidates[0];
+            if (addSchematicWireWithoutHistory(sourceKey, candidate.attachment.endpoint, candidate.attachment)) connections += 1;
+          }
+        }
+        return { connections, ambiguous };
+      }
+
+      function addComponent(type, x, y, forcedValue = null, forcedId = null, rotation = 0, options = {}) {
         type = canonicalComponentType(type);
         const def = TYPE_DEFS[type];
         if (!def) return null;
@@ -2270,13 +2951,16 @@
           x: clamp(snap(x), 80, SCHEMATIC_WIDTH - 80),
           y: clamp(snap(y), 80, SCHEMATIC_HEIGHT - 80),
           rotation: ((rotation % 360) + 360) % 360,
-          ...(type === "transistor" ? { transistorKind: "npn" } : {}),
+          mirrored: false,
+          ...(type === "transistor" ? { transistorKind: "npn", transistorPinout: ["C", "B", "E"] } : {}),
+          ...(type === "diode" ? { diodeKind: "standard" } : {}),
           ...(type === "opamp" ? { opampKind: "double", opampSection: "A", opampBaseId: '' } : {}),
           ...(type === "switch" ? { switchKind: "spst" } : {}),
           ...(type === "otherIC" ? { otherIcModel: "PT2399" } : {}),
           ...(type === "voltageRegulator" ? { voltageRegulatorModel: "78L05" } : {}),
           ...(type === "led" ? { ledScope: "onboard", ledColor: "red" } : {}),
-          ...(type === "terminal" ? { netScope: "offboard" } : {})
+          ...(type === "potentiometer" ? { potType: TYPE_DEFS.potentiometer.defaultPotType, potResistance: TYPE_DEFS.potentiometer.defaultResistance } : {}),
+          ...(type === "terminal" ? { netScope: options.netScope === "onboard" ? "onboard" : "offboard" } : {})
         };
         if (type === 'opamp') {
           const openPackage = state.components
@@ -2310,17 +2994,31 @@
             component.value = forcedValue ?? 'TL072';
           }
         }
-        if (type === "potentiometer" && forcedValue === null) component.value = component.id.toLowerCase();
+        if (type === "potentiometer" && forcedValue === null) {
+          const number = String(component.id).match(/(\d+)/)?.[1] || "1";
+          component.value = `pot${number}`;
+        }
         if (type === "switch" && forcedValue === null) component.value = `switch${String(component.id).replace(/\D+/g, "") || "1"}`;
         if (type === "otherIC") component.value = "PT2399";
         if (type === "voltageRegulator") component.value = "78L05";
+        if (type === "terminal") {
+          const existingLabels = terminalComponentsForLabel(component.value);
+          if (existingLabels.length) component.netScope = commonTerminalScope(component.value);
+        }
         state.components.push(component);
         ensureComponentIdentities(state.components);
+        if (type === "terminal") setTerminalScopeForLabel(component.value, terminalScopeOf(component));
+        const stickyResult = stickyConnectMovedComponents([component.id]);
         setSingleComponentSelection(component.id);
         invalidateGeneratedLayout();
         recordState();
         renderAll();
-        setStatus(`${component.id} placed. Select Wire and click two pins to connect it.`);
+        const stickyText = stickyResult.connections
+          ? ` ${stickyResult.connections} sticky connection${stickyResult.connections === 1 ? "" : "s"} added automatically.`
+          : stickyResult.ambiguous
+            ? " A pin landed on crossing nets, so no automatic connection was made."
+            : "";
+        setStatus(`${component.id} placed.${stickyText} Select Wire and click two pins to connect it.`);
         return component;
       }
 
@@ -2350,6 +3048,10 @@
         const nextModels = transistorModelsForKind(nextKind);
         if (!component.value || oldKnownModels.includes(normalizedPartModel(component.value))) component.value = nextModels[0];
         component.transistorKind = nextKind;
+        const family = transistorFamilyData(component.value);
+        component.transistorPinout = family?.kind === nextKind
+          ? [...family.order]
+          : nextKind === "jfet" ? ["D", "S", "G"] : ["C", "B", "E"];
         invalidateGeneratedLayout();
         recordState();
         renderAll();
@@ -2383,12 +3085,50 @@
         if (knownKind && knownKind !== transistorKindOf(component)) {
           changeSelectedTransistorKind(knownKind);
           const remapped = getComponent(state.selected.id);
-          if (remapped) remapped.value = modelValue;
-        } else component.value = modelValue;
+          if (remapped) {
+            remapped.value = modelValue;
+            remapped.transistorPinout = [...(transistorFamilyData(modelValue)?.order || transistorLeadOrder(remapped))];
+          }
+        } else {
+          component.value = modelValue;
+          const family = transistorFamilyData(modelValue);
+          if (family) component.transistorPinout = [...family.order];
+        }
         invalidateGeneratedLayout();
         recordState();
         renderAll();
         setStatus(`${component.id} model changed to ${modelValue}.`);
+      }
+
+      function changeSelectedDiodeKind(nextKindValue) {
+        if (state.selected?.kind !== "component") return;
+        const component = getComponent(state.selected.id);
+        if (!component || component.type !== "diode") return;
+        const oldKind = diodeKindOf(component);
+        const nextKind = canonicalDiodeKind(nextKindValue);
+        if (oldKind === nextKind) return;
+        const oldModels = diodeModelsForKind(oldKind).map(normalizedPartModel);
+        component.diodeKind = nextKind;
+        if (!component.value || oldModels.includes(normalizedPartModel(component.value))) {
+          component.value = diodeModelsForKind(nextKind)[0];
+        }
+        invalidateGeneratedLayout();
+        recordState();
+        renderAll();
+        setStatus(`${component.id} changed to a ${nextKind} diode.`);
+      }
+
+      function changeSelectedDiodeModel(modelValue) {
+        if (state.selected?.kind !== "component") return;
+        const component = getComponent(state.selected.id);
+        if (!component || component.type !== "diode") return;
+        const inferredKind = inferredDiodeKindFromModel(modelValue);
+        if (inferredKind) component.diodeKind = inferredKind;
+        component.value = modelValue || diodeModelsForKind(diodeKindOf(component))[0];
+        invalidateGeneratedLayout();
+        recordState();
+        renderAll();
+        setStatus(`${component.id} model changed to ${component.value}.`);
       }
 
       function changeSelectedOpampModel(modelValue) {
@@ -2610,22 +3350,145 @@
         setStatus(`${component.id} rotated to ${component.rotation}°.`);
       }
 
-      function duplicateSelected() {
+      function flipSelected() {
         const components = selectedComponents();
-        if (components.length !== 1) return;
-        const original = components[0];
-        const copy = {
-          ...original,
-          id: nextId(original.type),
-          x: clamp(original.x + GRID * 3, 80, SCHEMATIC_WIDTH - 80),
-          y: clamp(original.y + GRID * 3, 80, SCHEMATIC_HEIGHT - 80)
-        };
-        state.components.push(copy);
-        setSingleComponentSelection(copy.id);
+        if (!components.length) return;
+        for (const component of components) component.mirrored = !component.mirrored;
         invalidateGeneratedLayout();
         recordState();
         renderAll();
-        setStatus(`${copy.id} duplicated from ${original.id}.`);
+        setStatus(components.length === 1
+          ? `${components[0].id} ${components[0].mirrored ? "mirrored" : "returned to its normal orientation"}.`
+          : `${components.length} selected components flipped/mirrored.`);
+      }
+
+      function serializableClone(value) {
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function copySelectedSchematic({ quiet = false } = {}) {
+        const components = selectedComponents();
+        if (!components.length) {
+          if (!quiet) toast("Select one or more schematic components first.");
+          return false;
+        }
+        const ids = new Set(components.map(component => component.id));
+        const wires = state.wires.filter(wire =>
+          ids.has(splitPinKey(wire.a).componentId) && ids.has(splitPinKey(wire.b).componentId)
+        );
+        state.schematicClipboard = {
+          components: serializableClone(components),
+          wires: serializableClone(wires),
+          minX: Math.min(...components.map(component => component.x)),
+          maxX: Math.max(...components.map(component => component.x)),
+          minY: Math.min(...components.map(component => component.y)),
+          maxY: Math.max(...components.map(component => component.y))
+        };
+        state.pasteSerial = 0;
+        if (!quiet) {
+          toast(`${components.length} component${components.length === 1 ? "" : "s"} copied.`, "success");
+          setStatus(`Copied ${components.length} component${components.length === 1 ? "" : "s"} and ${wires.length} internal wire${wires.length === 1 ? "" : "s"}.`);
+        }
+        return true;
+      }
+
+      function pasteSchematicClipboard({ quiet = false } = {}) {
+        const clipboard = state.schematicClipboard;
+        if (!clipboard?.components?.length) {
+          if (!quiet) toast("Nothing has been copied yet.");
+          return [];
+        }
+
+        state.pasteSerial = (state.pasteSerial || 0) + 1;
+        const sourceCenterX = (clipboard.minX + clipboard.maxX) / 2;
+        const sourceCenterY = (clipboard.minY + clipboard.maxY) / 2;
+        let dx;
+        let dy;
+        if (state.pointerInSchematic && state.view === "schematic") {
+          dx = snap(state.pointerWorld.x - sourceCenterX);
+          dy = snap(state.pointerWorld.y - sourceCenterY);
+        } else {
+          dx = GRID * 3 * state.pasteSerial;
+          dy = GRID * 3 * state.pasteSerial;
+        }
+        dx = clamp(dx, 80 - clipboard.minX, SCHEMATIC_WIDTH - 80 - clipboard.maxX);
+        dy = clamp(dy, 80 - clipboard.minY, SCHEMATIC_HEIGHT - 80 - clipboard.maxY);
+
+        const idMap = new Map();
+        const packageAssignments = new Map();
+        const packageMembers = new Map();
+        for (const source of clipboard.components.filter(component => component.type === "opamp")) {
+          const key = source.opampPackageUid || opampBaseIdOf(source) || source.id;
+          if (!packageMembers.has(key)) packageMembers.set(key, []);
+          packageMembers.get(key).push(source);
+        }
+        for (const [key, members] of packageMembers.entries()) {
+          packageAssignments.set(key, {
+            baseId: nextId("opamp"),
+            packageUid: uid("OPKG"),
+            dual: members.length > 1 || members.some(member => opampKindOf(member) === "double")
+          });
+        }
+
+        const pasted = [];
+        for (const source of clipboard.components) {
+          const copy = serializableClone(source);
+          copy.instanceUid = uid("CMP");
+          copy.x = source.x + dx;
+          copy.y = source.y + dy;
+          if (copy.type === "opamp") {
+            const packageKey = source.opampPackageUid || opampBaseIdOf(source) || source.id;
+            const assignment = packageAssignments.get(packageKey);
+            copy.opampBaseId = assignment.baseId;
+            copy.opampPackageUid = assignment.packageUid;
+            copy.id = assignment.dual ? `${assignment.baseId}${opampSectionOf(source)}` : assignment.baseId;
+          } else {
+            copy.id = nextId(copy.type);
+          }
+          idMap.set(source.id, copy.id);
+          pasted.push(copy);
+        }
+
+        const pastedWires = clipboard.wires.map(sourceWire => {
+          const remapEndpoint = endpoint => {
+            const info = splitPinKey(endpoint);
+            return pinKey(idMap.get(info.componentId), info.pinName);
+          };
+          const wire = {
+            ...serializableClone(sourceWire),
+            id: uid("W"),
+            a: remapEndpoint(sourceWire.a),
+            b: remapEndpoint(sourceWire.b)
+          };
+          if (wire.routeStyle === "horizontal-first" && Number.isFinite(Number(wire.routeOffset))) wire.routeOffset = Number(wire.routeOffset) + dx;
+          if (wire.routeStyle === "vertical-first" && Number.isFinite(Number(wire.routeOffset))) wire.routeOffset = Number(wire.routeOffset) + dy;
+          return wire;
+        });
+
+        state.components.push(...pasted);
+        state.wires.push(...pastedWires);
+        ensureComponentIdentities(state.components);
+        synchronizeAllTerminalScopes(state.components);
+        state.selectedComponentIds = pasted.map(component => component.id);
+        state.selected = pasted.length ? { kind: "component", id: pasted[0].id } : null;
+        state.pendingWirePin = null;
+        invalidateGeneratedLayout();
+        recordState();
+        renderAll();
+        if (!quiet) {
+          toast(`${pasted.length} component${pasted.length === 1 ? "" : "s"} pasted.`, "success");
+          setStatus(`Pasted ${pasted.length} component${pasted.length === 1 ? "" : "s"} with ${pastedWires.length} internal wire${pastedWires.length === 1 ? "" : "s"}.`);
+        }
+        return pasted;
+      }
+
+      function duplicateSelected() {
+        const components = selectedComponents();
+        if (components.length !== 1) return;
+        const originalId = components[0].id;
+        if (!copySelectedSchematic({ quiet: true })) return;
+        const pasted = pasteSchematicClipboard({ quiet: true });
+        if (pasted.length) setStatus(`${pasted[0].id} duplicated from ${originalId}.`);
       }
 
       function setTool(tool) {
@@ -2704,9 +3567,13 @@
         if (state.tool === "select" || state.tool === "wire") return null;
         let type = state.tool;
         let value = null;
+        let previewNetScope = "offboard";
         if (type.startsWith("terminal:")) {
           value = type.slice("terminal:".length);
-          if (value === "CUSTOM") value = "NET";
+          if (value === "CUSTOM") {
+            value = "NET";
+            previewNetScope = "onboard";
+          }
           type = "terminal";
         }
         type = canonicalComponentType(type);
@@ -2719,15 +3586,20 @@
           x: clamp(snap(state.pointerWorld.x), 80, SCHEMATIC_WIDTH - 80),
           y: clamp(snap(state.pointerWorld.y), 80, SCHEMATIC_HEIGHT - 80),
           rotation: state.placementRotation || 0,
-          ...(type === "transistor" ? { transistorKind: "npn" } : {}),
+          mirrored: false,
+          ...(type === "transistor" ? { transistorKind: "npn", transistorPinout: ["C", "B", "E"] } : {}),
           ...(type === "opamp" ? { opampKind: "double", opampSection: "A", opampBaseId: id.replace(/A$/, "") } : {}),
           ...(type === "switch" ? { switchKind: "spst" } : {}),
           ...(type === "otherIC" ? { otherIcModel: "PT2399" } : {}),
           ...(type === "voltageRegulator" ? { voltageRegulatorModel: "78L05" } : {}),
           ...(type === "led" ? { ledScope: "onboard", ledColor: "red" } : {}),
-          ...(type === "terminal" ? { netScope: "offboard" } : {})
+          ...(type === "potentiometer" ? { potType: TYPE_DEFS.potentiometer.defaultPotType, potResistance: TYPE_DEFS.potentiometer.defaultResistance } : {}),
+          ...(type === "terminal" ? { netScope: previewNetScope } : {})
         };
-        if (type === "potentiometer") component.value = id.toLowerCase();
+        if (type === "potentiometer") {
+          const number = String(id).match(/(\d+)/)?.[1] || "1";
+          component.value = `pot${number}`;
+        }
         if (type === "switch") component.value = `switch${String(id).replace(/\D+/g, "") || "1"}`;
         return component;
       }
@@ -2776,14 +3648,20 @@
           const net = netData.pinToNet.get(wire.a);
           const selected = state.selected?.kind === "wire" && state.selected.id === wire.id;
           const route = wireRouteDefinition(wire, start, end);
-          const path = svgEl("path", {
-            d: pathFromPoints(route.points),
-            class: `schematic-wire${selected ? " selected" : ""}`,
-            stroke: selected ? "#ffffff" : netColor(net?.name || "", net?.index || 0),
-            "data-wire-id": wire.id
+          const routePath = pathFromPoints(route.points);
+          const hitPath = svgEl("path", {
+            d: routePath,
+            class: "schematic-wire-hit",
+            "data-wire-id": wire.id,
+            "aria-label": `${net?.name || "Wire"} — click to select`
           }, wireLayer);
-          const title = svgEl("title", {}, path);
-          title.textContent = net?.name || "Wire";
+          const title = svgEl("title", {}, hitPath);
+          title.textContent = `${net?.name || "Wire"} — click to select or edit`;
+          svgEl("path", {
+            d: routePath,
+            class: `schematic-wire${selected ? " selected" : ""}`,
+            stroke: selected ? "#ffffff" : netColor(net?.name || "", net?.index || 0)
+          }, wireLayer);
           if (selected) selectedWireEditor = { wire, route };
         }
 
@@ -2855,8 +3733,7 @@
         const labelGroup = svgEl("g", {
           transform: `translate(${component.x} ${component.y})`,
           class: "schematic-component-labels",
-          "data-component-id": component.id,
-          "pointer-events": "none"
+          "data-component-id": component.id
         }, parent);
 
         const entries = [];
@@ -2870,6 +3747,7 @@
           if (text === component.id) return "id";
           if (component.type === "transistor" && text === transistorSubtype) return "subtype";
           if (component.type === "terminal" && !label.classList.contains("symbol-value")) return "net";
+          if (component.type === "potentiometer" && label.classList.contains("pot-resistance-label")) return "potResistance";
           if (label.classList.contains("symbol-value") && text === valueText) return "value";
           if (label.classList.contains("pin-name")) return "pin";
           return "mark";
@@ -2878,7 +3756,7 @@
         for (const label of labels) {
           const localX = Number.parseFloat(label.getAttribute("x") || "0");
           const localY = Number.parseFloat(label.getAttribute("y") || "0");
-          const uprightPosition = rotatePoint(localX, localY, rotation);
+          const uprightPosition = rotatePoint(component.mirrored ? -localX : localX, localY, rotation);
           const role = labelRole(label);
 
           label.setAttribute("x", uprightPosition.x);
@@ -2896,6 +3774,10 @@
             }
           }
 
+          if (!["pin", "mark"].includes(role)) {
+            label.classList.add("component-label-hit");
+            label.setAttribute("data-component-id", component.id);
+          }
           labelGroup.appendChild(label);
           entries.push({ label, role, localX, localY });
         }
@@ -2917,17 +3799,30 @@
         // of rotating the spacing between the two lines and making them clash.
         const twoLineGeometry = {
           resistor: { side: 34, idY: -20, valueY: 20 },
-          potentiometer: { side: 58, idY: -36, valueY: 84 },
-          switch: { side: 76, idY: -72, valueY: 82 },
+          switch: { side: 68, idY: -62, valueY: 70 },
           capacitor: { side: 38, idY: -31, valueY: 31 },
           capacitorPolarized: { side: 40, idY: -31, valueY: 31 },
           diode: { side: 38, idY: -30, valueY: 30 },
           led: { side: 46, idY: -38, valueY: 38 },
-          voltageRegulator: { side: 58, idY: -38, valueY: 84 },
+          voltageRegulator: { side: 50, idY: -34, valueY: 70 },
           jumper: { side: 42, idY: -18, valueY: 34 }
         }[component.type];
 
-        if (twoLineGeometry) {
+        if (component.type === "potentiometer") {
+          const resistanceEntry = entry("potResistance");
+          if (vertical) {
+            const sideSign = rotation === 90 ? 1 : -1;
+            const x = sideSign * 54;
+            const anchor = sideSign > 0 ? "start" : "end";
+            place(idEntry, x, -18, anchor);
+            place(valueEntry, x, 2, anchor);
+            place(resistanceEntry, x, 20, anchor);
+          } else {
+            place(idEntry, 0, -34, "middle");
+            place(valueEntry, 0, 76, "middle");
+            place(resistanceEntry, 0, 94, "middle");
+          }
+        } else if (twoLineGeometry) {
           if (vertical) {
             const sideSign = rotation === 90 ? 1 : -1;
             const x = sideSign * twoLineGeometry.side;
@@ -2939,21 +3834,23 @@
             place(valueEntry, 0, twoLineGeometry.valueY, "middle");
           }
         } else if (component.type === "transistor") {
-          const idPosition = rotatePoint(35, -2, rotation);
-          const subtypePosition = rotatePoint(0, 42, rotation);
-          const valuePosition = rotatePoint(0, 56, rotation);
+          const mirror = component.mirrored ? -1 : 1;
+          const idPosition = rotatePoint(30 * mirror, -2, rotation);
+          const subtypePosition = rotatePoint(0, 32, rotation);
+          const valuePosition = rotatePoint(0, 46, rotation);
           place(idEntry, idPosition.x, idPosition.y, "middle");
           place(entry("subtype"), subtypePosition.x, subtypePosition.y, "middle");
           place(valueEntry, valuePosition.x, valuePosition.y, "middle");
         } else if (component.type === "opamp") {
-          // Keep the ID and model stacked inside the triangle at every angle.
-          place(idEntry, 3, -8, "middle");
-          place(valueEntry, 3, 13, "middle");
+          // Keep the smaller ID and model stacked safely inside the triangle.
+          place(idEntry, 2, -5, "middle");
+          place(valueEntry, 2, 7, "middle");
         } else if (component.type === "otherIC") {
           place(idEntry, 0, -9, "middle");
           place(valueEntry, 0, 12, "middle");
         } else if (component.type === "terminal") {
-          const blockCenter = rotatePoint(35, 9, rotation);
+          const terminalDirection = normalizeNetLabel(component.value) === "INPUT" ? -1 : 1;
+          const blockCenter = rotatePoint(35 * terminalDirection, 9, rotation);
           const anchor = Math.abs(blockCenter.x) > Math.abs(blockCenter.y) + 8
             ? (blockCenter.x < 0 ? "end" : "start")
             : "middle";
@@ -2962,10 +3859,55 @@
         }
       }
 
+      function appendSchematicComponentHitGeometry(sourceGroup, targetGroup, componentId, componentType = "") {
+        const hitGroup = svgEl("g", {
+          class: "component-hit-geometry",
+          "data-component-id": componentId
+        }, targetGroup);
+
+        for (const source of sourceGroup.querySelectorAll("line,path,polyline,polygon,rect,circle,ellipse")) {
+          const tag = source.tagName.toLowerCase();
+          const sourceClass = source.getAttribute("class") || "";
+          const pathData = source.getAttribute("d") || "";
+          const closedPath = tag === "path" && /[zZ]\s*$/.test(pathData);
+          const hasInterior = ["rect", "circle", "ellipse", "polygon"].includes(tag) || sourceClass.includes("symbol-fill") || closedPath;
+          const hit = source.cloneNode(false);
+          hit.removeAttribute("id");
+          hit.removeAttribute("filter");
+          hit.removeAttribute("style");
+          hit.setAttribute("class", `component-hit ${hasInterior ? "component-hit-fill" : "component-hit-stroke"}`);
+          hit.setAttribute("data-component-id", componentId);
+          hit.setAttribute("fill", hasInterior ? "rgba(255,255,255,.001)" : "none");
+          hit.setAttribute("stroke", "rgba(255,255,255,.001)");
+          hit.setAttribute("stroke-width", "8");
+          hitGroup.appendChild(hit);
+        }
+
+        // The visible body interiors of these symbols are intentionally part
+        // of their selection target. This keeps selection precise while making
+        // the enclosed spaces shown by the symbol easy to click.
+        const interiorHitAreas = {
+          resistor: { x: -42, y: -13, width: 84, height: 26, rx: 2 },
+          capacitor: { x: -8, y: -22, width: 16, height: 44, rx: 1 },
+          capacitorPolarized: { x: -9, y: -22, width: 31, height: 44, rx: 1 }
+        };
+        const interior = interiorHitAreas[componentType];
+        if (interior) {
+          svgEl("rect", {
+            ...interior,
+            class: "component-hit component-hit-fill",
+            "data-component-id": componentId,
+            fill: "rgba(255,255,255,.001)",
+            stroke: "none"
+          }, hitGroup);
+        }
+        return hitGroup;
+      }
+
       function renderSchematicComponent(component, parent, netData, degrees) {
         const def = componentDef(component);
         const group = svgEl("g", {
-          transform: `translate(${component.x} ${component.y}) rotate(${component.rotation || 0})`,
+          transform: `translate(${component.x} ${component.y}) rotate(${component.rotation || 0}) scale(${component.mirrored ? -1 : 1} 1)`,
           "data-component-id": component.id,
           class: "schematic-component"
         }, parent);
@@ -2981,17 +3923,9 @@
           }, group);
         }
 
-        svgEl("rect", {
-          x: def.bounds.x,
-          y: def.bounds.y,
-          width: def.bounds.width,
-          height: def.bounds.height,
-          class: "component-hit",
-          "data-component-id": component.id
-        }, group);
-
         const body = svgEl("g", { class: "component-body" }, group);
         drawSchematicSymbol(body, component);
+        appendSchematicComponentHitGeometry(body, group, component.id, component.type);
 
         for (const pin of def.pins) {
           const key = pinKey(component.id, pin.name);
@@ -3059,13 +3993,14 @@
         }
 
         if (component.type === "potentiometer") {
-          svgEl("line", { x1: -70, y1: 0, x2: -43, y2: 0, class: "symbol-line" }, group);
-          svgEl("path", { d: "M -43 0 L -35 -11 L -23 11 L -11 -11 L 1 11 L 13 -11 L 25 11 L 35 0 L 43 0", class: "symbol-line" }, group);
-          svgEl("line", { x1: 43, y1: 0, x2: 70, y2: 0, class: "symbol-line" }, group);
-          svgEl("line", { x1: 0, y1: 70, x2: 0, y2: 32, class: "symbol-line" }, group);
-          drawFilledArrow(group, { x: 0, y: 32 }, { x: 0, y: 8 }, 10);
-          svgEl("text", { x: 0, y: -36, class: "symbol-text", "text-anchor": "middle", textContent: id }, group);
-          svgEl("text", { x: 0, y: 84, class: "symbol-value", "text-anchor": "middle", textContent: value }, group);
+          svgEl("line", { x1: -60, y1: 0, x2: -42, y2: 0, class: "symbol-line" }, group);
+          svgEl("path", { d: "M -42 0 L -34 -11 L -22 11 L -10 -11 L 2 11 L 14 -11 L 26 11 L 34 0 L 42 0", class: "symbol-line" }, group);
+          svgEl("line", { x1: 42, y1: 0, x2: 60, y2: 0, class: "symbol-line" }, group);
+          svgEl("line", { x1: 0, y1: 60, x2: 0, y2: 30, class: "symbol-line" }, group);
+          drawFilledArrow(group, { x: 0, y: 30 }, { x: 0, y: 8 }, 9);
+          svgEl("text", { x: 0, y: -34, class: "symbol-text", "text-anchor": "middle", textContent: id }, group);
+          svgEl("text", { x: 0, y: 76, class: "symbol-value", "text-anchor": "middle", textContent: value }, group);
+          svgEl("text", { x: 0, y: 94, class: "symbol-value pot-resistance-label", "text-anchor": "middle", textContent: component.potResistance || TYPE_DEFS.potentiometer.defaultResistance }, group);
           return;
         }
 
@@ -3082,8 +4017,8 @@
         if (isPolarizedCapacitor(component)) {
           svgEl("line", { x1: -60, y1: 0, x2: -9, y2: 0, class: "symbol-line" }, group);
           svgEl("line", { x1: -9, y1: -22, x2: -9, y2: 22, class: "symbol-line" }, group);
-          svgEl("path", { d: "M 8 -22 Q 22 0 8 22", class: "symbol-line" }, group);
-          svgEl("line", { x1: 8, y1: 0, x2: 60, y2: 0, class: "symbol-line" }, group);
+          svgEl("path", { d: "M 22 -22 Q 8 0 22 22", class: "symbol-line" }, group);
+          svgEl("line", { x1: 22, y1: 0, x2: 60, y2: 0, class: "symbol-line" }, group);
           svgEl("text", { x: -25, y: -18, class: "symbol-text", "text-anchor": "middle", textContent: "+" }, group);
           svgEl("text", { x: 0, y: -31, class: "symbol-text", "text-anchor": "middle", textContent: id }, group);
           svgEl("text", { x: 0, y: 31, class: "symbol-value", "text-anchor": "middle", textContent: value }, group);
@@ -3091,9 +4026,19 @@
         }
 
         if (component.type === "diode") {
+          const diodeKind = diodeKindOf(component);
           svgEl("line", { x1: -60, y1: 0, x2: -24, y2: 0, class: "symbol-line" }, group);
           svgEl("path", { d: "M -24 -20 L 22 0 L -24 20 Z", class: "symbol-fill" }, group);
-          svgEl("line", { x1: 24, y1: -22, x2: 24, y2: 22, class: "symbol-line" }, group);
+          if (diodeKind === "schottky") {
+            // Schottky cathode: bracketed/hooked cathode line.
+            svgEl("line", { x1: 24, y1: -18, x2: 24, y2: 18, class: "symbol-line" }, group);
+            svgEl("path", { d: "M 24 -18 H 32 V -9 M 24 18 H 16 V 9", class: "symbol-line" }, group);
+          } else if (diodeKind === "zener") {
+            // Zener cathode: the cathode bar has oppositely angled ends.
+            svgEl("path", { d: "M 32 -22 L 24 -14 V 14 L 16 22", class: "symbol-line" }, group);
+          } else {
+            svgEl("line", { x1: 24, y1: -22, x2: 24, y2: 22, class: "symbol-line" }, group);
+          }
           svgEl("line", { x1: 24, y1: 0, x2: 60, y2: 0, class: "symbol-line" }, group);
           svgEl("text", { x: 0, y: -30, class: "symbol-text", "text-anchor": "middle", textContent: id }, group);
           svgEl("text", { x: 0, y: 30, class: "symbol-value", "text-anchor": "middle", textContent: value }, group);
@@ -3115,18 +4060,18 @@
         }
 
         if (component.type === "voltageRegulator") {
-          svgEl("line", { x1: -70, y1: 0, x2: -34, y2: 0, class: "symbol-line" }, group);
-          svgEl("line", { x1: 34, y1: 0, x2: 70, y2: 0, class: "symbol-line" }, group);
-          svgEl("line", { x1: 0, y1: 34, x2: 0, y2: 70, class: "symbol-line" }, group);
-          svgEl("rect", { x: -34, y: -25, width: 68, height: 59, rx: 5, class: "symbol-line" }, group);
-          svgEl("text", { x: -24, y: 4, fill: "#dfe4e8", "font-size": 10, "font-weight": 800, "text-anchor": "middle", textContent: "IN" }, group);
-          svgEl("text", { x: 24, y: 4, fill: "#dfe4e8", "font-size": 10, "font-weight": 800, "text-anchor": "middle", textContent: "OUT" }, group);
-          svgEl("text", { x: 0, y: 28, fill: "#dfe4e8", "font-size": 9, "font-weight": 800, "text-anchor": "middle", textContent: "GND" }, group);
-          svgEl("text", { x: -47, y: -7, fill: "#aeb6be", "font-size": 9, "font-weight": 750, "text-anchor": "middle", textContent: "3" }, group);
-          svgEl("text", { x: 47, y: -7, fill: "#aeb6be", "font-size": 9, "font-weight": 750, "text-anchor": "middle", textContent: "1" }, group);
-          svgEl("text", { x: 10, y: 56, fill: "#aeb6be", "font-size": 9, "font-weight": 750, "text-anchor": "start", textContent: "2" }, group);
-          svgEl("text", { x: 0, y: -38, class: "symbol-text", "text-anchor": "middle", textContent: id }, group);
-          svgEl("text", { x: 0, y: 84, class: "symbol-value", "text-anchor": "middle", textContent: value }, group);
+          svgEl("line", { x1: -60, y1: 0, x2: -30, y2: 0, class: "symbol-line" }, group);
+          svgEl("line", { x1: 30, y1: 0, x2: 60, y2: 0, class: "symbol-line" }, group);
+          svgEl("line", { x1: 0, y1: 30, x2: 0, y2: 60, class: "symbol-line" }, group);
+          svgEl("rect", { x: -30, y: -22, width: 60, height: 52, rx: 5, class: "symbol-line" }, group);
+          svgEl("text", { x: -20, y: 3, fill: "#dfe4e8", "font-size": 9, "font-weight": 800, "text-anchor": "middle", textContent: "IN" }, group);
+          svgEl("text", { x: 20, y: 3, fill: "#dfe4e8", "font-size": 9, "font-weight": 800, "text-anchor": "middle", textContent: "OUT" }, group);
+          svgEl("text", { x: 0, y: 25, fill: "#dfe4e8", "font-size": 8, "font-weight": 800, "text-anchor": "middle", textContent: "GND" }, group);
+          svgEl("text", { x: -43, y: -7, fill: "#aeb6be", "font-size": 9, "font-weight": 750, "text-anchor": "middle", textContent: "3" }, group);
+          svgEl("text", { x: 43, y: -7, fill: "#aeb6be", "font-size": 9, "font-weight": 750, "text-anchor": "middle", textContent: "1" }, group);
+          svgEl("text", { x: 10, y: 49, fill: "#aeb6be", "font-size": 9, "font-weight": 750, "text-anchor": "start", textContent: "2" }, group);
+          svgEl("text", { x: 0, y: -34, class: "symbol-text", "text-anchor": "middle", textContent: id }, group);
+          svgEl("text", { x: 0, y: 70, class: "symbol-value", "text-anchor": "middle", textContent: value }, group);
           return;
         }
 
@@ -3134,30 +4079,47 @@
           const kind = switchKindOf(component);
           const drawContact = (x, y) => svgEl("circle", { cx: x, cy: y, r: 3.2, fill: "#181c20", stroke: "#e7ebef", "stroke-width": 2 }, group);
           const drawSpstPole = y => {
-            svgEl("line", { x1: -70, y1: y, x2: -22, y2: y, class: "symbol-line" }, group);
-            svgEl("line", { x1: 22, y1: y, x2: 70, y2: y, class: "symbol-line" }, group);
+            svgEl("line", { x1: -60, y1: y, x2: -22, y2: y, class: "symbol-line" }, group);
+            svgEl("line", { x1: 22, y1: y, x2: 60, y2: y, class: "symbol-line" }, group);
             drawContact(-20, y); drawContact(20, y);
-            svgEl("line", { x1: -18, y1: y - 2, x2: 16, y2: y - 20, class: "symbol-line" }, group);
+            svgEl("line", { x1: -18, y1: y - 2, x2: 16, y2: y - 18, class: "symbol-line" }, group);
           };
           const drawSpdtPole = (commonY, upperY, lowerY) => {
-            svgEl("line", { x1: -70, y1: commonY, x2: -22, y2: commonY, class: "symbol-line" }, group);
-            svgEl("line", { x1: 22, y1: upperY, x2: 70, y2: upperY, class: "symbol-line" }, group);
-            svgEl("line", { x1: 22, y1: lowerY, x2: 70, y2: lowerY, class: "symbol-line" }, group);
+            svgEl("line", { x1: -60, y1: commonY, x2: -22, y2: commonY, class: "symbol-line" }, group);
+            svgEl("line", { x1: 22, y1: upperY, x2: 60, y2: upperY, class: "symbol-line" }, group);
+            svgEl("line", { x1: 22, y1: lowerY, x2: 60, y2: lowerY, class: "symbol-line" }, group);
             drawContact(-20, commonY); drawContact(20, upperY); drawContact(20, lowerY);
             svgEl("line", { x1: -18, y1: commonY - 2, x2: 16, y2: upperY + 2, class: "symbol-line" }, group);
           };
+          const drawSp3tPole = (commonY, upperY, middleY, lowerY) => {
+            svgEl("line", { x1: -60, y1: commonY, x2: -22, y2: commonY, class: "symbol-line" }, group);
+            for (const throwY of [upperY, middleY, lowerY]) {
+              svgEl("line", { x1: 22, y1: throwY, x2: 60, y2: throwY, class: "symbol-line" }, group);
+              drawContact(20, throwY);
+            }
+            drawContact(-20, commonY);
+            svgEl("line", { x1: -18, y1: commonY - 2, x2: 16, y2: upperY + 2, class: "symbol-line" }, group);
+          };
           if (kind === "spst") drawSpstPole(0);
-          else if (kind === "spdt") drawSpdtPole(0, -30, 30);
+          else if (kind === "spdt") drawSpdtPole(0, -20, 20);
+          else if (kind === "sp3t") drawSp3tPole(0, -40, 0, 40);
           else if (kind === "dpst") {
-            drawSpstPole(-30); drawSpstPole(30);
-            svgEl("line", { x1: 0, y1: -22, x2: 0, y2: 22, stroke: "#9ca5ad", "stroke-width": 1.4, "stroke-dasharray": "4 4" }, group);
+            drawSpstPole(-20); drawSpstPole(20);
+            svgEl("line", { x1: 0, y1: -13, x2: 0, y2: 13, stroke: "#9ca5ad", "stroke-width": 1.4, "stroke-dasharray": "4 4" }, group);
+          } else if (kind === "dpdt") {
+            drawSpdtPole(-40, -60, -20); drawSpdtPole(40, 20, 60);
+            svgEl("line", { x1: 0, y1: -20, x2: 0, y2: 20, stroke: "#9ca5ad", "stroke-width": 1.4, "stroke-dasharray": "4 4" }, group);
           } else {
-            drawSpdtPole(-35, -55, -15); drawSpdtPole(35, 15, 55);
-            svgEl("line", { x1: 0, y1: -22, x2: 0, y2: 22, stroke: "#9ca5ad", "stroke-width": 1.4, "stroke-dasharray": "4 4" }, group);
+            drawSp3tPole(-60, -100, -60, -20); drawSp3tPole(60, 20, 60, 100);
+            svgEl("line", { x1: 0, y1: -32, x2: 0, y2: 32, stroke: "#9ca5ad", "stroke-width": 1.4, "stroke-dasharray": "4 4" }, group);
           }
-          svgEl("text", { x: 0, y: kind.startsWith("dp") ? -72 : -48, class: "symbol-text", "text-anchor": "middle", textContent: id }, group);
-          svgEl("text", { x: 0, y: kind.startsWith("dp") ? 82 : 54, class: "symbol-value", "text-anchor": "middle", textContent: value }, group);
-          svgEl("text", { x: 0, y: kind.startsWith("dp") ? 0 : -28, fill: "#aab3bb", "font-size": 10, "font-weight": 800, "text-anchor": "middle", textContent: kind.toUpperCase() }, group);
+          const switchDef = SWITCH_KIND_DEFS[kind];
+          const idY = switchDef.bounds.y - 6;
+          const valueY = switchDef.bounds.y + switchDef.bounds.height + 6;
+          const typeY = kind.startsWith("dp") ? 0 : (kind === "sp3t" ? 60 : -27);
+          svgEl("text", { x: 0, y: idY, class: "symbol-text", "text-anchor": "middle", textContent: id }, group);
+          svgEl("text", { x: 0, y: valueY, class: "symbol-value", "text-anchor": "middle", textContent: value }, group);
+          svgEl("text", { x: 0, y: typeY, fill: "#aab3bb", "font-size": 10, "font-weight": 800, "text-anchor": "middle", textContent: kind.toUpperCase() }, group);
           return;
         }
 
@@ -3175,56 +4137,51 @@
           const kindDef = TRANSISTOR_KIND_DEFS[kind];
 
           if (kind === "jfet") {
-            // Compact JFET symbol: same topology at roughly 60% of the former size.
-            svgEl("line", { x1: -36, y1: 0, x2: -12, y2: 0, class: "symbol-line" }, group);
-            svgEl("line", { x1: -12, y1: -15, x2: -12, y2: 15, class: "symbol-line" }, group);
-            svgEl("line", { x1: 1, y1: -17, x2: 1, y2: 17, class: "symbol-line" }, group);
-            svgEl("line", { x1: 1, y1: -17, x2: 14, y2: -22, class: "symbol-line" }, group);
-            svgEl("line", { x1: 14, y1: -22, x2: 27, y2: -30, class: "symbol-line" }, group);
-            svgEl("line", { x1: 1, y1: 17, x2: 14, y2: 22, class: "symbol-line" }, group);
-            svgEl("line", { x1: 14, y1: 22, x2: 27, y2: 30, class: "symbol-line" }, group);
-            drawFilledArrow(group, { x: -22, y: 0 }, { x: -13, y: 0 }, 6);
+            svgEl("line", { x1: -40, y1: 0, x2: -13, y2: 0, class: "symbol-line" }, group);
+            svgEl("line", { x1: -13, y1: -13, x2: -13, y2: 13, class: "symbol-line" }, group);
+            svgEl("line", { x1: 0, y1: -14, x2: 0, y2: 14, class: "symbol-line" }, group);
+            svgEl("line", { x1: 0, y1: -14, x2: 10, y2: -17, class: "symbol-line" }, group);
+            svgEl("line", { x1: 10, y1: -17, x2: 20, y2: -20, class: "symbol-line" }, group);
+            svgEl("line", { x1: 0, y1: 14, x2: 10, y2: 17, class: "symbol-line" }, group);
+            svgEl("line", { x1: 10, y1: 17, x2: 20, y2: 20, class: "symbol-line" }, group);
+            drawFilledArrow(group, { x: -23, y: 0 }, { x: -14, y: 0 }, 6);
           } else {
-            // Compact conventional BJT symbol. NPN arrow points out; PNP arrow points in.
-            svgEl("line", { x1: -36, y1: 0, x2: -8, y2: 0, class: "symbol-line" }, group);
-            svgEl("line", { x1: -8, y1: -17, x2: -8, y2: 17, class: "symbol-line" }, group);
-            svgEl("line", { x1: -8, y1: -8, x2: 13, y2: -21, class: "symbol-line" }, group);
-            svgEl("line", { x1: 13, y1: -21, x2: 27, y2: -30, class: "symbol-line" }, group);
-            svgEl("line", { x1: -8, y1: 8, x2: 13, y2: 21, class: "symbol-line" }, group);
-            svgEl("line", { x1: 13, y1: 21, x2: 27, y2: 30, class: "symbol-line" }, group);
-            if (kind === "pnp") {
-              drawFilledArrow(group, { x: 21, y: -26 }, { x: 11, y: -19 }, 6);
-            } else {
-              drawFilledArrow(group, { x: 11, y: 19 }, { x: 21, y: 26 }, 6);
-            }
+            svgEl("line", { x1: -40, y1: 0, x2: -9, y2: 0, class: "symbol-line" }, group);
+            svgEl("line", { x1: -9, y1: -14, x2: -9, y2: 14, class: "symbol-line" }, group);
+            svgEl("line", { x1: -9, y1: -7, x2: 6, y2: -14, class: "symbol-line" }, group);
+            svgEl("line", { x1: 6, y1: -14, x2: 20, y2: -20, class: "symbol-line" }, group);
+            svgEl("line", { x1: -9, y1: 7, x2: 6, y2: 14, class: "symbol-line" }, group);
+            svgEl("line", { x1: 6, y1: 14, x2: 20, y2: 20, class: "symbol-line" }, group);
+            if (kind === "pnp") drawFilledArrow(group, { x: 16, y: -18 }, { x: 7, y: -14 }, 6);
+            else drawFilledArrow(group, { x: 7, y: 14 }, { x: 16, y: 18 }, 6);
           }
 
-          svgEl("text", { x: 35, y: -2, class: "symbol-text", "font-size": 12, "text-anchor": "middle", textContent: id }, group);
-          svgEl("text", { x: 0, y: 42, class: "symbol-text", "font-size": 10, "font-weight": 800, "text-anchor": "middle", textContent: kindDef.shortName }, group);
-          svgEl("text", { x: 0, y: 56, class: "symbol-value", "font-size": 10, "text-anchor": "middle", textContent: value }, group);
+          svgEl("text", { x: 30, y: -2, class: "symbol-text", "font-size": 12, "text-anchor": "middle", textContent: id }, group);
+          svgEl("text", { x: 0, y: 32, class: "symbol-text", "font-size": 10, "font-weight": 800, "text-anchor": "middle", textContent: kindDef.shortName }, group);
+          svgEl("text", { x: 0, y: 46, class: "symbol-value", "font-size": 10, "text-anchor": "middle", textContent: value }, group);
           return;
         }
 
         if (component.type === "opamp") {
           const def = componentDef(component);
-          svgEl("path", { d: "M -45 -55 L -45 55 L 55 0 Z", class: "symbol-line" }, group);
-          svgEl("line", { x1: -70, y1: -25, x2: -45, y2: -25, class: "symbol-line" }, group);
-          svgEl("line", { x1: -70, y1: 25, x2: -45, y2: 25, class: "symbol-line" }, group);
-          svgEl("line", { x1: 55, y1: 0, x2: 75, y2: 0, class: "symbol-line" }, group);
-          if (def.pins.some(pin => pin.name === "V+")) svgEl("line", { x1: 0, y1: -75, x2: 0, y2: -31, class: "symbol-line" }, group);
-          if (def.pins.some(pin => pin.name === "V−")) svgEl("line", { x1: 0, y1: 75, x2: 0, y2: 31, class: "symbol-line" }, group);
-          svgEl("text", { x: -31, y: -25, class: "symbol-text", "text-anchor": "middle", textContent: "−" }, group);
-          svgEl("text", { x: -31, y: 25, class: "symbol-text", "text-anchor": "middle", textContent: "+" }, group);
+          svgEl("path", { d: "M -40 -40 L -40 40 L 40 0 Z", class: "symbol-line" }, group);
+          svgEl("line", { x1: -60, y1: -20, x2: -40, y2: -20, class: "symbol-line" }, group);
+          svgEl("line", { x1: -60, y1: 20, x2: -40, y2: 20, class: "symbol-line" }, group);
+          svgEl("line", { x1: 40, y1: 0, x2: 60, y2: 0, class: "symbol-line" }, group);
+          if (def.pins.some(pin => pin.name === "V+")) svgEl("line", { x1: 0, y1: -60, x2: 0, y2: -27, class: "symbol-line" }, group);
+          if (def.pins.some(pin => pin.name === "V−")) svgEl("line", { x1: 0, y1: 60, x2: 0, y2: 27, class: "symbol-line" }, group);
+          svgEl("text", { x: -28, y: -20, class: "symbol-text", "text-anchor": "middle", textContent: "−" }, group);
+          svgEl("text", { x: -28, y: 20, class: "symbol-text", "text-anchor": "middle", textContent: "+" }, group);
           for (const pin of def.pins) {
             if (!pin.physical) continue;
-            const px = pin.x + (pin.x < 0 ? 11 : pin.x > 0 ? -11 : 10);
-            const py = pin.y + (pin.y < 0 ? 10 : pin.y > 0 ? -10 : -8);
-            svgEl("text", { x: px, y: py, fill: "#d1d6db", "font-size": 10, "font-weight": 700, "text-anchor": pin.x === 0 ? 'start' : 'middle', textContent: pin.physical }, group);
+            const px = pin.x + (pin.x < 0 ? 10 : pin.x > 0 ? -10 : 9);
+            const py = pin.y + (pin.y < 0 ? 9 : pin.y > 0 ? -9 : -7);
+            svgEl("text", { x: px, y: py, fill: "#d1d6db", "font-size": 9.5, "font-weight": 700, "text-anchor": pin.x === 0 ? 'start' : 'middle', textContent: pin.physical }, group);
           }
           const sectionLabel = opampKindOf(component) === 'double' ? opampSectionOf(component) : '';
-          svgEl("text", { x: 3, y: -10, class: "symbol-text", "text-anchor": "middle", textContent: id }, group);
-          if (sectionLabel) svgEl("text", { x: 38, y: -38, fill: '#d1d6db', 'font-size': 11, 'font-weight': 800, 'text-anchor': 'middle', textContent: sectionLabel }, group);
-          svgEl("text", { x: 3, y: 12, class: "symbol-value", "text-anchor": "middle", textContent: value }, group);
+          svgEl("text", { x: 2, y: -5, class: "symbol-text", "font-size": 9.5, "font-weight": 800, "text-anchor": "middle", textContent: id }, group);
+          if (sectionLabel) svgEl("text", { x: 29, y: -29, fill: '#d1d6db', 'font-size': 8.5, 'font-weight': 800, 'text-anchor': 'middle', textContent: sectionLabel }, group);
+          svgEl("text", { x: 2, y: 7, class: "symbol-value", "font-size": 7.5, "text-anchor": "middle", textContent: value }, group);
           return;
         }
 
@@ -3253,10 +4210,12 @@
 
         if (component.type === "terminal") {
           const color = netColor(value, 0);
+          const inputFacesRight = normalizeNetLabel(value) === "INPUT";
+          const direction = inputFacesRight ? -1 : 1;
           svgEl("circle", { cx: 0, cy: 0, r: 4.5, fill: color, stroke: "#ffffff", "stroke-width": 1.2 }, group);
-          svgEl("line", { x1: 4.5, y1: 0, x2: 28, y2: 0, stroke: color, "stroke-width": 2.2 }, group);
-          svgEl("text", { x: 35, y: 0, fill: color, "font-size": 14, "font-weight": 800, "dominant-baseline": "middle", textContent: normalizeNetLabel(value) }, group);
-          svgEl("text", { x: 35, y: 18, class: "symbol-value", textContent: id }, group);
+          svgEl("line", { x1: 4.5 * direction, y1: 0, x2: 28 * direction, y2: 0, stroke: color, "stroke-width": 2.2 }, group);
+          svgEl("text", { x: 35 * direction, y: 0, fill: color, "font-size": 14, "font-weight": 800, "text-anchor": inputFacesRight ? "end" : "start", "dominant-baseline": "middle", textContent: normalizeNetLabel(value) }, group);
+          svgEl("text", { x: 35 * direction, y: 18, class: "symbol-value", "text-anchor": inputFacesRight ? "end" : "start", textContent: id }, group);
         }
       }
 
@@ -3264,8 +4223,9 @@
         const selectedList = selectedComponents();
         const selectedComponent = selectedList.length === 1 ? selectedList[0] : null;
         const dynamicFields = [
-          els.transistorTypeField, els.transistorModelField, els.opampTypeField, els.opampModelField,
-          els.switchTypeField, els.otherIcModelField, els.voltageRegulatorModelField, els.ledScopeField, els.ledColorField, els.netScopeField
+          els.transistorTypeField, els.transistorModelField, els.diodeTypeField, els.diodeModelField, els.opampTypeField, els.opampModelField,
+          els.switchTypeField, els.otherIcModelField, els.voltageRegulatorModelField, els.ledScopeField, els.ledColorField, els.netScopeField,
+          els.potTypeField, els.potResistanceField
         ];
         if (!selectedComponent) {
           els.propertyEmpty.classList.remove("hidden");
@@ -3288,14 +4248,18 @@
         els.propertyForm.classList.remove("hidden");
         els.propId.value = selectedComponent.id;
         const selectedIsTransistor = selectedComponent.type === "transistor";
+        const selectedIsDiode = selectedComponent.type === "diode";
         const selectedIsOpamp = selectedComponent.type === "opamp";
         const selectedIsSwitch = selectedComponent.type === "switch";
         const selectedIsOtherIc = selectedComponent.type === "otherIC";
         const selectedIsVoltageRegulator = selectedComponent.type === "voltageRegulator";
         const selectedIsLed = selectedComponent.type === "led";
         const selectedIsTerminal = selectedComponent.type === "terminal";
+        const selectedIsPotentiometer = selectedComponent.type === "potentiometer";
         els.transistorTypeField.classList.toggle("hidden", !selectedIsTransistor);
         els.transistorModelField.classList.toggle("hidden", !selectedIsTransistor);
+        els.diodeTypeField.classList.toggle("hidden", !selectedIsDiode);
+        els.diodeModelField.classList.toggle("hidden", !selectedIsDiode);
         els.opampTypeField.classList.toggle("hidden", !selectedIsOpamp);
         els.opampModelField.classList.toggle("hidden", !selectedIsOpamp);
         els.switchTypeField.classList.toggle("hidden", !selectedIsSwitch);
@@ -3304,10 +4268,21 @@
         els.ledScopeField.classList.toggle("hidden", !selectedIsLed);
         els.ledColorField.classList.toggle("hidden", !selectedIsLed);
         els.netScopeField.classList.toggle("hidden", !selectedIsTerminal);
+        els.potTypeField.classList.toggle("hidden", !selectedIsPotentiometer);
+        els.potResistanceField.classList.toggle("hidden", !selectedIsPotentiometer);
+        if (selectedIsPotentiometer) {
+          els.propPotType.value = potTypeOf(selectedComponent);
+          els.propPotResistance.value = selectedComponent.potResistance || TYPE_DEFS.potentiometer.defaultResistance;
+        }
         if (selectedIsTransistor) {
           const kind = transistorKindOf(selectedComponent);
           els.propTransistorType.value = kind;
           fillSelectOptions(els.propTransistorModel, transistorModelsForKind(kind), selectedComponent.value);
+        }
+        if (selectedIsDiode) {
+          const kind = diodeKindOf(selectedComponent);
+          els.propDiodeType.value = kind;
+          fillSelectOptions(els.propDiodeModel, diodeModelsForKind(kind), selectedComponent.value);
         }
         if (selectedIsOpamp) {
           const kind = opampKindOf(selectedComponent);
@@ -3327,7 +4302,7 @@
         else if (selectedComponent.type === "potentiometer") els.propValueLabel.textContent = "Potentiometer name";
         else if (selectedComponent.type === "switch") els.propValueLabel.textContent = "Switch name";
         else if (selectedComponent.type === "led") els.propValueLabel.textContent = "LED name";
-        else if (selectedIsTransistor || selectedIsOpamp || selectedIsOtherIc || selectedIsVoltageRegulator) els.propValueLabel.textContent = "Part / model";
+        else if (selectedIsTransistor || selectedIsDiode || selectedIsOpamp || selectedIsOtherIc || selectedIsVoltageRegulator) els.propValueLabel.textContent = "Part / model";
         else els.propValueLabel.textContent = "Value / model";
         els.propRotation.value = `${selectedComponent.rotation || 0}°`;
         els.selectionStatus.textContent = `${selectedComponent.id} — ${componentDef(selectedComponent).name}`;
@@ -3371,12 +4346,15 @@
           components: state.components.map(component => ({
             id: component.id,
             type: component.type,
-            ...(component.type === "transistor" ? { transistorKind: transistorKindOf(component) } : {}),
+            ...(component.type === "transistor" ? { transistorKind: transistorKindOf(component), transistorPinout: transistorLeadOrder(component) } : {}),
+            ...(component.type === "diode" ? { diodeKind: diodeKindOf(component) } : {}),
+            ...(component.mirrored ? { mirrored: true } : {}),
             ...(component.type === "opamp" ? { opampKind: opampKindOf(component), opampSection: opampSectionOf(component), opampBaseId: opampBaseIdOf(component) } : {}),
             ...(component.type === "switch" ? { switchKind: switchKindOf(component) } : {}),
             ...(component.type === "otherIC" ? { otherIcModel: otherIcModelOf(component) } : {}),
             ...(component.type === "voltageRegulator" ? { voltageRegulatorModel: voltageRegulatorModelOf(component) } : {}),
             ...(component.type === "led" ? { ledScope: ledScopeOf(component), ledColor: ledColorOf(component) } : {}),
+            ...(component.type === "potentiometer" ? { potType: potTypeOf(component), resistance: component.potResistance || TYPE_DEFS.potentiometer.defaultResistance } : {}),
             ...(component.type === "terminal" ? { netScope: terminalScopeOf(component) } : {}),
             value: component.value,
             rotation: component.rotation,
@@ -3514,6 +4492,33 @@
         els.checksPanel.classList.toggle("hidden", state.rightTab !== "checks");
       }
 
+      function applySchematicZoom() {
+        state.schematicZoom = clamp(Number(state.schematicZoom) || 1, .25, 2.5);
+        els.schematicSvg.style.width = `${SCHEMATIC_WIDTH * state.schematicZoom}px`;
+        els.schematicSvg.style.height = `${SCHEMATIC_HEIGHT * state.schematicZoom}px`;
+        if (els.schematicZoomResetBtn) els.schematicZoomResetBtn.textContent = `${Math.round(state.schematicZoom * 100)}%`;
+      }
+
+      function fitSchematicToViewport() {
+        const availableWidth = Math.max(280, els.schematicWrap.clientWidth - 24);
+        const availableHeight = Math.max(220, els.schematicWrap.clientHeight - 24);
+        state.schematicZoom = clamp(Math.min(1, availableWidth / SCHEMATIC_WIDTH, availableHeight / SCHEMATIC_HEIGHT), .25, 1);
+        applySchematicZoom();
+        if (els.schematicZoomResetBtn) els.schematicZoomResetBtn.textContent = `Fit ${Math.round(state.schematicZoom * 100)}%`;
+        els.schematicWrap.scrollTo({ left: 0, top: 0 });
+      }
+
+      function setRightSidebarCollapsed(collapsed) {
+        state.rightSidebarCollapsed = Boolean(collapsed);
+        els.workspaceShell?.classList.toggle("right-sidebar-collapsed", state.rightSidebarCollapsed);
+        if (els.rightSidebarNotch) {
+          els.rightSidebarNotch.textContent = state.rightSidebarCollapsed ? "‹" : "›";
+          els.rightSidebarNotch.title = state.rightSidebarCollapsed ? "Show right sidebar" : "Hide right sidebar";
+          els.rightSidebarNotch.setAttribute("aria-label", els.rightSidebarNotch.title);
+          els.rightSidebarNotch.setAttribute("aria-expanded", state.rightSidebarCollapsed ? "false" : "true");
+        }
+      }
+
       function switchView(view) {
         state.view = view;
         const schematic = view === "schematic";
@@ -3526,7 +4531,10 @@
         if (!schematic) {
           if (!state.veroLayout) renderVero(null);
           updateVeroEditUi();
-        } else renderProperties();
+        } else {
+          renderProperties();
+          applySchematicZoom();
+        }
       }
 
       function boardFootprintVariants(component) {
@@ -3551,6 +4559,46 @@
             }
           }
           return variants;
+        }
+
+        if (component.type === "potentiometer" && potTypeOf(component) === "trimmer") {
+          // Common compact board trimmer footprint: pins 1 and 3 are two
+          // hole pitches apart, with the wiper on the centered adjacent row.
+          // Four rotations preserve the physical 1/2/3 relationship.
+          return [
+            {
+              key: "trimmer-0", orientation: "trimmer-0", width: 3, height: 2,
+              pins: [
+                { logical: "1", physical: "1", x: 0, y: 0 },
+                { logical: "2", physical: "2", x: 1, y: 1 },
+                { logical: "3", physical: "3", x: 2, y: 0 }
+              ]
+            },
+            {
+              key: "trimmer-90", orientation: "trimmer-90", width: 2, height: 3,
+              pins: [
+                { logical: "1", physical: "1", x: 1, y: 0 },
+                { logical: "2", physical: "2", x: 0, y: 1 },
+                { logical: "3", physical: "3", x: 1, y: 2 }
+              ]
+            },
+            {
+              key: "trimmer-180", orientation: "trimmer-180", width: 3, height: 2,
+              pins: [
+                { logical: "1", physical: "1", x: 2, y: 1 },
+                { logical: "2", physical: "2", x: 1, y: 0 },
+                { logical: "3", physical: "3", x: 0, y: 1 }
+              ]
+            },
+            {
+              key: "trimmer-270", orientation: "trimmer-270", width: 2, height: 3,
+              pins: [
+                { logical: "1", physical: "1", x: 0, y: 2 },
+                { logical: "2", physical: "2", x: 1, y: 1 },
+                { logical: "3", physical: "3", x: 0, y: 0 }
+              ]
+            }
+          ];
         }
 
         if (["resistor", "capacitor", "capacitorPolarized", "diode", "led"].includes(component.type)) {
@@ -3609,9 +4657,36 @@
           return variants;
         }
 
-        if (component.type === "transistor" || component.type === "voltageRegulator") {
+        if (component.type === "transistor") {
+          // transistorLeadOrder() is the lead sequence viewed from the flat
+          // face, left-to-right. On a vertical Vero column, a package whose
+          // flat face points right is therefore read bottom-to-top; its visual
+          // top-to-bottom order must be reversed. A flat face pointing left
+          // uses the datasheet order directly.
+          const leadOrder = transistorLeadOrder(component);
+          const flatRightOrder = [...leadOrder].reverse();
+          const flatLeftOrder = [...leadOrder];
+          return [
+            {
+              key: `to92-flat-right-${flatRightOrder.join("")}`,
+              orientation: "to92-flat-right",
+              width: 1,
+              height: 3,
+              pins: flatRightOrder.map((logical, index) => ({ logical, physical: logical, x: 0, y: index }))
+            },
+            {
+              key: `to92-flat-left-${flatLeftOrder.join("")}`,
+              orientation: "to92-flat-left",
+              width: 1,
+              height: 3,
+              pins: flatLeftOrder.map((logical, index) => ({ logical, physical: logical, x: 0, y: index }))
+            }
+          ];
+        }
+
+        if (component.type === "voltageRegulator") {
           const variants = [];
-          const leadOrder = component.type === "voltageRegulator" ? ["I", "G", "O"] : transistorLeadOrder(component);
+          const leadOrder = ["I", "G", "O"];
           const orders = [leadOrder, [...leadOrder].reverse()];
           for (const order of orders) {
             variants.push({
@@ -3763,6 +4838,7 @@
           else if (component.type === "otherIC") record.model = otherIcModelOf(component);
           else if (component.type === "voltageRegulator") record.model = voltageRegulatorModelOf(component);
           else if (component.type === "led") record.scope = ledScopeOf(component);
+          else if (component.type === "potentiometer") record.potType = potTypeOf(component);
           else if (component.type === "terminal") record.scope = terminalScopeOf(component);
           return record;
         }).sort((a, b) => a.identity.localeCompare(b.identity));
@@ -4160,6 +5236,42 @@
         return result.sort((a, b) => a.y - b.y || a.x - b.x);
       }
 
+      function edgeTerminalRowsByColumn(terminals = [], columns = 0) {
+        const rowsByColumn = new Map();
+        if (!Number.isFinite(columns) || columns < 1) return rowsByColumn;
+        for (const terminal of terminals || []) {
+          const x = terminal.side === "right" ? columns - 1 : 0;
+          if (!rowsByColumn.has(x)) rowsByColumn.set(x, new Set());
+          rowsByColumn.get(x).add(Number(terminal.row));
+        }
+        return rowsByColumn;
+      }
+
+      function routeOverlapsEdgeTerminal(start, end, edgeTerminalRows, columns) {
+        if (!start || !end || start.x !== end.x || !edgeTerminalRows?.size) return false;
+        const x = start.x;
+        if (x !== 0 && x !== columns - 1) return false;
+        const terminalRows = edgeTerminalRows.get(x);
+        if (!terminalRows?.size) return false;
+        const minY = Math.min(start.y, end.y);
+        const maxY = Math.max(start.y, end.y);
+        for (const row of terminalRows) {
+          if (row >= minY && row <= maxY) return true;
+        }
+        return false;
+      }
+
+      function routeOverlapsLayoutEdgeTerminal(route, terminals, columns) {
+        const points = route?.points || [];
+        if (points.length < 2) return false;
+        return routeOverlapsEdgeTerminal(
+          points[0],
+          points[points.length - 1],
+          edgeTerminalRowsByColumn(terminals, columns),
+          columns
+        );
+      }
+
       function routeConflictsExisting(start, end, existingRoutes) {
         if (start.x !== end.x) return false;
         const x = start.x;
@@ -4176,7 +5288,15 @@
         });
       }
 
-      function bestSegmentLink(segmentA, segmentB, occupiedBodyCells, endpointUse, linkObstacleCells = occupiedBodyCells) {
+      function bestSegmentLink(
+        segmentA,
+        segmentB,
+        occupiedBodyCells,
+        endpointUse,
+        linkObstacleCells = occupiedBodyCells,
+        edgeTerminalRows = null,
+        boardColumns = null
+      ) {
         // Stripboard link wires remain vertical. When enabled, two links on the
         // same schematic net may share one endpoint hole only when they leave
         // that hole in opposite directions. This is the standard double-link
@@ -4191,6 +5311,7 @@
           if (!candidateB) continue;
           const start = { x, y: segmentA.row };
           const end = { x, y: segmentB.row };
+          if (Number.isFinite(boardColumns) && routeOverlapsEdgeTerminal(start, end, edgeTerminalRows, boardColumns)) continue;
           if (!canUseLinkEndpoint(endpointUse, start, end, netIndex)) continue;
           if (!canUseLinkEndpoint(endpointUse, end, start, netIndex)) continue;
 
@@ -4198,13 +5319,24 @@
           if (obstacleCount > 0) continue;
           const reusedEnds = (endpointUseEntries(endpointUse, `${start.x},${start.y}`).length ? 1 : 0) +
             (endpointUseEntries(endpointUse, `${end.x},${end.y}`).length ? 1 : 0);
-          const score = Math.abs(segmentA.row - segmentB.row) + candidateA.penalty + candidateB.penalty - reusedEnds * 1.35;
+          // Edge columns are reserved primarily for off-board connections.
+          // They remain available only when the route does not cross an edge
+          // terminal and no better interior landing column exists.
+          const edgePenalty = Number.isFinite(boardColumns) && (x === 0 || x === boardColumns - 1) ? 40 : 0;
+          const score = Math.abs(segmentA.row - segmentB.row) + candidateA.penalty + candidateB.penalty + edgePenalty - reusedEnds * 1.35;
           if (!best || score < best.score) best = { score, xA: x, xB: x };
         }
         return best;
       }
 
-      function assignNonOverlappingLinkColumns(routes, segments, occupiedBodyCells, linkObstacleCells = occupiedBodyCells) {
+      function assignNonOverlappingLinkColumns(
+        routes,
+        segments,
+        occupiedBodyCells,
+        linkObstacleCells = occupiedBodyCells,
+        edgeTerminalRows = null,
+        boardColumns = null
+      ) {
         if (!routes.length) return true;
         const segmentById = new Map(segments.map(segment => [segment.id, segment]));
         const routeInfos = [];
@@ -4222,9 +5354,13 @@
           for (let x = startX; x <= endX; x += 1) {
             if (!endpointIsAccessible(fromSegment, x, occupiedBodyCells)) continue;
             if (!endpointIsAccessible(toSegment, x, occupiedBodyCells)) continue;
+            const start = { x, y: fromSegment.row };
+            const end = { x, y: toSegment.row };
+            if (Number.isFinite(boardColumns) && routeOverlapsEdgeTerminal(start, end, edgeTerminalRows, boardColumns)) continue;
             const obstacleCount = lineObstacleCount({ x, y: minY }, { x, y: maxY }, linkObstacleCells);
             if (obstacleCount > 0) continue;
-            candidates.push({ x, score: Math.abs(x - currentX) * .08 });
+            const edgePenalty = Number.isFinite(boardColumns) && (x === 0 || x === boardColumns - 1) ? 40 : 0;
+            candidates.push({ x, score: Math.abs(x - currentX) * .08 + edgePenalty });
           }
           if (!candidates.length) return false;
           candidates.sort((a, b) => a.score - b.score || a.x - b.x);
@@ -4325,7 +5461,10 @@
         "capacitor",
         "capacitorPolarized",
         "diode",
-        "led"
+        "led",
+        "potentiometer",
+        "transistor",
+        "voltageRegulator"
       ]);
 
       function linkAvoidanceAppliesTo(component) {
@@ -4861,6 +6000,12 @@
         }
         if (!terminalSelection) return null;
 
+        // External pads occupy the first or last board column. A vertical
+        // internal link may use an edge column only when its complete span is
+        // clear of every off-board pad on that edge. This prevents links from
+        // running through INPUT, OUTPUT, power, ground, pot, or switch leads.
+        const edgeTerminalRows = edgeTerminalRowsByColumn(terminalSelection.terminals, columns);
+
         const topology = buildCopperTopology(terminalSelection.contacts, columns);
         if (!topology) return null;
         const { cuts, segments, segmentsByNet } = topology;
@@ -4932,7 +6077,15 @@
               for (const toIndex of remaining) {
                 if (landingCapacity[toIndex] !== capacity) continue;
                 for (const fromIndex of connected) {
-                  const link = bestSegmentLink(netSegments[fromIndex], netSegments[toIndex], occupiedBodyCells, new Map(), linkObstacleCells);
+                  const link = bestSegmentLink(
+                    netSegments[fromIndex],
+                    netSegments[toIndex],
+                    occupiedBodyCells,
+                    new Map(),
+                    linkObstacleCells,
+                    edgeTerminalRows,
+                    columns
+                  );
                   if (!link) continue;
                   if (!best || link.score < best.link.score) best = { fromIndex, toIndex, link };
                 }
@@ -4977,7 +6130,15 @@
             for (const group of groups) {
               let groupBest = null;
               for (const segmentIndex of group) {
-                const link = bestSegmentLink(netSegments[segmentIndex], busSegment, occupiedBodyCells, new Map(), linkObstacleCells);
+                const link = bestSegmentLink(
+                  netSegments[segmentIndex],
+                  busSegment,
+                  occupiedBodyCells,
+                  new Map(),
+                  linkObstacleCells,
+                  edgeTerminalRows,
+                  columns
+                );
                 if (!link) continue;
                 if (!groupBest || link.score < groupBest.link.score) groupBest = { segmentIndex, link };
               }
@@ -5043,7 +6204,14 @@
           }
         }
 
-        if (!assignNonOverlappingLinkColumns(routes, segments, occupiedBodyCells, linkObstacleCells)) {
+        if (!assignNonOverlappingLinkColumns(
+          routes,
+          segments,
+          occupiedBodyCells,
+          linkObstacleCells,
+          edgeTerminalRows,
+          columns
+        )) {
           if (linkRepairDepth >= 10 || columns >= maximumColumns) return null;
           const boundary = findLinkRepairBoundary(routes, segments, occupiedBodyCells, placements, columns);
           if (boundary === null) return null;
@@ -5055,6 +6223,18 @@
             maximumColumns,
             Math.min(maximumColumns, columns + 1)
           );
+        }
+
+        // Final hard guarantees. Generated links may never cross protected
+        // discrete packages, and edge-column links may never pass through an
+        // off-board connection pad. These checks run after global link-column
+        // assignment so no later routing step can reintroduce either fault.
+        if (state.boardSettings.avoidLinksOverComponents !== false &&
+            routes.some(route => placements.some(placement => routeCrossesAvoidedComponent(route, placement, true)))) {
+          return null;
+        }
+        if (routes.some(route => routeOverlapsLayoutEdgeTerminal(route, terminalSelection.terminals, columns))) {
+          return null;
         }
 
         const doubleLinks = computeDoubleLinkHoles(routes);
@@ -6231,6 +7411,11 @@
           .sort((a, b) => Math.abs(a - estimatedWidth) - Math.abs(b - estimatedWidth) || a - b);
 
         const clearance = state.boardSettings.busSpacing === 2 ? 1 : 0;
+        // Potentiometers historically used POT1/POT2 IDs. They are now shown
+        // as VR1/VR2, but canonicalizing only the routing seed preserves the
+        // proven placement search for existing projects without exposing the
+        // old prefix anywhere in the UI or saved project.
+        const routerSeedEndpoint = endpoint => String(endpoint || "").replace(/^VR(\d+):/i, "POT$1:");
         const baseSeed = hashString(JSON.stringify({
           components: electricalComponents.map(component => ({
             id: component.id, type: component.type,
@@ -6239,7 +7424,7 @@
             otherIcModel: component.type === "otherIC" ? otherIcModelOf(component) : undefined,
             value: component.value
           })),
-          wires: state.wires.map(wire => [wire.a, wire.b]).sort(),
+          wires: state.wires.map(wire => [routerSeedEndpoint(wire.a), routerSeedEndpoint(wire.b)]).sort(),
           settings: { ...state.boardSettings, maxColumns: maximumColumns }
         }));
 
@@ -6722,15 +7907,13 @@
           }
           const minY = Math.min(a.y, b.y);
           const maxY = Math.max(a.y, b.y);
+          const manualEdgeTerminalRows = edgeTerminalRowsByColumn(layout.terminals || [], layout.columns);
+          if (routeOverlapsEdgeTerminal(a, b, manualEdgeTerminalRows, layout.columns)) {
+            return { ok: false, message: "An internal link cannot pass through an off-board connection on an edge column." };
+          }
           if (state.boardSettings.avoidLinksOverComponents !== false) {
-            const crossesBody = (layout.placements || []).some(placement => {
-              if (!linkAvoidanceAppliesTo(placement.component)) return false;
-              for (let y = minY + 1; y < maxY; y += 1) {
-                if (placementOccupiesCell(placement, a.x, y)) return true;
-              }
-              return false;
-            });
-            if (crossesBody) return { ok: false, message: "Internal links are set to avoid resistors, capacitors, diodes, and LEDs." };
+            const crossesBody = (layout.placements || []).some(placement => routeCrossesAvoidedComponent(route, placement, true));
+            if (crossesBody) return { ok: false, message: "Internal links are set to avoid discrete components, including regulators and transistors." };
           }
           const intervals = intervalsByColumn.get(a.x) || [];
           if (intervals.some(interval => routeIntervalsOverlap(minY, maxY, interval.minY, interval.maxY))) {
@@ -6867,7 +8050,13 @@
         const disconnected = state.veroLayout.manualDisconnectedNets?.length || 0;
         if (disconnected) warnings.push(`${disconnected} split net${disconnected === 1 ? "" : "s"}`);
         const editState = state.veroManualEdited ? "Manual edits active." : "Generated layout; no manual edits yet. Drag the bottom-right notch to resize the board.";
-        els.veroEditStatus.textContent = `${editState} ${selectionDescription()}${warnings.length ? ` Warning: ${warnings.join(", ")}.` : ""}`;
+        els.veroEditStatus.replaceChildren(document.createTextNode(`${editState} ${selectionDescription()}`));
+        if (warnings.length) {
+          const warning = document.createElement("span");
+          warning.className = "vero-warning";
+          warning.textContent = ` Warning: ${warnings.join(", ")}.`;
+          els.veroEditStatus.appendChild(warning);
+        }
       }
 
       function drawVeroEditHandles(layout, geometry, parent) {
@@ -7102,6 +8291,42 @@
         commitVeroHistory();
         renderVero(state.veroLayout);
         setStatus(`${selectionDescription()} Manual Vero edit saved.`);
+      }
+
+      async function deleteSelectedVeroItem() {
+        if (!state.veroLayout || state.veroLayout.error || !state.veroSelection) return false;
+        const selection = state.veroSelection;
+        const isRoute = selection.kind === "route" || selection.kind === "routeEndpoint";
+        const isCut = selection.kind === "cut";
+        if (!isRoute && !isCut) return false;
+
+        const confirmed = await showAppMessage({
+          title: isRoute ? "Delete internal link?" : "Delete track cut?",
+          message: isRoute
+            ? "Are you sure you want to delete this internal link? This may split an electrical net."
+            : "Are you sure you want to delete this track cut? This may join copper sections and create a physical short.",
+          confirmLabel: isRoute ? "Delete link" : "Delete cut",
+          cancelLabel: isRoute ? "Keep link" : "Keep cut",
+          danger: true
+        });
+        if (!confirmed) return false;
+
+        if (isRoute) {
+          if (!state.veroLayout.routes?.[selection.index]) return false;
+          state.veroLayout.routes.splice(selection.index, 1);
+        } else {
+          if (!state.veroLayout.cuts?.[selection.index]) return false;
+          state.veroLayout.cuts.splice(selection.index, 1);
+        }
+        state.veroSelection = null;
+        state.veroManualEdited = true;
+        state.veroLayout.manualEdited = true;
+        refreshManualLayoutConnectivity(state.veroLayout);
+        commitVeroHistory();
+        renderVero(state.veroLayout);
+        updateVeroEditUi();
+        setStatus(isRoute ? "Internal link deleted. Check the Vero editor warnings for split nets." : "Track cut deleted. Check the Vero editor warnings for physical shorts.");
+        return true;
       }
 
       function renderVero(layout) {
@@ -7384,6 +8609,51 @@
           return { pins, a, b, horizontal, centerX, centerY, distance, bodyLength, angle: horizontal ? 0 : 90 };
         };
 
+        if (component.type === "potentiometer" && potTypeOf(component) === "trimmer") {
+          const points = footprint.pins.map(pin => ({ pin, point: point(pin.x, pin.y) }));
+          const minX = Math.min(...points.map(item => item.point.x));
+          const maxX = Math.max(...points.map(item => item.point.x));
+          const minY = Math.min(...points.map(item => item.point.y));
+          const maxY = Math.max(...points.map(item => item.point.y));
+          const bodyX = minX - 7;
+          const bodyY = minY - 7;
+          const bodyW = Math.max(38, maxX - minX + 14);
+          const bodyH = Math.max(34, maxY - minY + 14);
+          const centerX = bodyX + bodyW / 2;
+          const centerY = bodyY + bodyH / 2;
+          const body = svgEl("rect", {
+            x: bodyX, y: bodyY, width: bodyW, height: bodyH, rx: 7,
+            fill: "#286f9c", stroke: "#8bd8f5", "stroke-width": 1.35,
+            "data-component-id": component.id, "data-potentiometer-type": "trimmer"
+          }, parent);
+          svgEl("title", { textContent: `${component.id} — ${component.potResistance || TYPE_DEFS.potentiometer.defaultResistance} trimmer potentiometer` }, body);
+          const screwRadius = Math.min(10.5, Math.max(8, Math.min(bodyW, bodyH) * .24));
+          svgEl("circle", { cx: centerX, cy: centerY, r: screwRadius, fill: "#d9e1e6", stroke: "#31434f", "stroke-width": 1.25 }, parent);
+          svgEl("line", {
+            x1: centerX - screwRadius * .62, y1: centerY + screwRadius * .18,
+            x2: centerX + screwRadius * .62, y2: centerY - screwRadius * .18,
+            stroke: "#52636d", "stroke-width": 2.2, "stroke-linecap": "round"
+          }, parent);
+          svgEl("text", {
+            x: centerX, y: bodyY + 8.5, fill: "#ffffff", "font-size": 7.8, "font-weight": 950,
+            "text-anchor": "middle", "dominant-baseline": "middle", textContent: component.id
+          }, parent);
+          svgEl("text", {
+            x: centerX, y: bodyY + bodyH - 6.5, fill: "#d8edf8", "font-size": 6.8, "font-weight": 800,
+            "text-anchor": "middle", "dominant-baseline": "middle",
+            textContent: component.potResistance || TYPE_DEFS.potentiometer.defaultResistance
+          }, parent);
+          // Re-expose the three actual board contacts over the body.
+          for (const item of points) {
+            svgEl("circle", { cx: item.point.x, cy: item.point.y, r: 4.3, fill: "#17a5c6", stroke: "#9be8f8", "stroke-width": 1 }, parent);
+            svgEl("text", {
+              x: item.point.x, y: item.point.y + 2.4, fill: "#09212a", "font-size": 5.4, "font-weight": 950,
+              "text-anchor": "middle", textContent: item.pin.logical
+            }, parent);
+          }
+          return;
+        }
+
         if (component.type === "resistor") {
           const shape = twoPinGeometry();
           const displayValue = component.value ? veroResistorValue(component.value) : component.id;
@@ -7571,11 +8841,92 @@
           return;
         }
 
-        if (component.type === "transistor" || component.type === "voltageRegulator") {
-          const isRegulator = component.type === "voltageRegulator";
-          const kind = isRegulator ? "regulator" : transistorKindOf(component);
-          const kindDef = isRegulator ? { name: "78L05 voltage regulator" } : TRANSISTOR_KIND_DEFS[kind];
-          const rolePins = isRegulator ? { upper: "I", control: "G", lower: "O" } : TRANSISTOR_ROLE_PINS[kind];
+        if (component.type === "transistor") {
+          const kind = transistorKindOf(component);
+          const kindDef = TRANSISTOR_KIND_DEFS[kind];
+          const orderedPins = footprint.pins
+            .map(pin => ({ pin, point: point(pin.x, pin.y) }))
+            .sort((a, b) => a.point.y - b.point.y || a.point.x - b.point.x);
+          if (orderedPins.length !== 3) return;
+
+          const centerX = orderedPins.reduce((sum, item) => sum + item.point.x, 0) / 3;
+          const centerY = orderedPins.reduce((sum, item) => sum + item.point.y, 0) / 3;
+          const flatOnLeft = String(footprint.orientation || "").includes("flat-left");
+
+          // A top-down TO-92 body placed directly over its three Vero holes.
+          // It deliberately occupies only this component column; the adjacent
+          // column remains electrically and visually usable.
+          const topY = orderedPins[0].point.y - geometry.pitch * .42;
+          const bottomY = orderedPins[2].point.y + geometry.pitch * .42;
+          const halfWidth = geometry.pitch * .66;
+          const flatX = centerX + (flatOnLeft ? -halfWidth : halfWidth);
+          const curvedX = centerX + (flatOnLeft ? halfWidth : -halfWidth);
+          const shoulderX = centerX + (flatOnLeft ? halfWidth * .84 : -halfWidth * .84);
+          const bodyPath = flatOnLeft
+            ? `M ${flatX} ${topY} L ${flatX} ${bottomY} C ${shoulderX} ${bottomY} ${curvedX} ${centerY + geometry.pitch * .45} ${curvedX} ${centerY} C ${curvedX} ${centerY - geometry.pitch * .45} ${shoulderX} ${topY} ${flatX} ${topY} Z`
+            : `M ${flatX} ${topY} L ${flatX} ${bottomY} C ${shoulderX} ${bottomY} ${curvedX} ${centerY + geometry.pitch * .45} ${curvedX} ${centerY} C ${curvedX} ${centerY - geometry.pitch * .45} ${shoulderX} ${topY} ${flatX} ${topY} Z`;
+
+          const visibleOrder = orderedPins.map(item => item.pin.logical);
+          const packageGroup = svgEl("g", {
+            "data-component-id": component.id,
+            "data-transistor-model": component.value || "",
+            "data-transistor-pinout": visibleOrder.join("-"),
+            "data-transistor-flat-face-order": transistorLeadOrder(component).join("-"),
+            "data-transistor-flat-side": flatOnLeft ? "left" : "right"
+          }, parent);
+          const body = svgEl("path", {
+            d: bodyPath,
+            fill: "#22282e",
+            stroke: "#9aa4ad",
+            "stroke-width": 1.35,
+            "stroke-linejoin": "round"
+          }, packageGroup);
+          svgEl("title", {
+            textContent: `${component.id} — ${kindDef.name} — ${component.value || ""} — board order ${visibleOrder.join("-")} — flat-face order ${transistorLeadOrder(component).join("-")}`
+          }, body);
+
+          // Preserve the colored family notch on the rounded side.
+          const kindColor = kind === "pnp" ? "#e0b43e" : kind === "jfet" ? "#a64bd0" : "#17a5c6";
+          const notchX = curvedX + (flatOnLeft ? -geometry.pitch * .08 : geometry.pitch * .08);
+          svgEl("line", {
+            x1: notchX, y1: centerY - geometry.pitch * .42,
+            x2: notchX, y2: centerY + geometry.pitch * .42,
+            stroke: kindColor, "stroke-width": 4.2, "stroke-linecap": "round", opacity: .96
+          }, packageGroup);
+
+          // Only the two edge leads are exposed. The middle pin is intentionally
+          // left beneath the package, matching the requested physical view.
+          for (const item of [orderedPins[0], orderedPins[2]]) {
+            svgEl("circle", { cx: item.point.x, cy: item.point.y, r: 4.55, fill: "#165e70", stroke: "#73dcf3", "stroke-width": 1.1 }, packageGroup);
+            svgEl("circle", { cx: item.point.x, cy: item.point.y, r: 1.55, fill: "#0b2630" }, packageGroup);
+          }
+
+          const labelX = centerX + (flatOnLeft ? -halfWidth * .52 : halfWidth * .52);
+          svgEl("text", {
+            x: labelX, y: topY + geometry.pitch * .39,
+            fill: "#dfe4e8", "font-size": 6.8, "font-weight": 850,
+            "text-anchor": "middle", "dominant-baseline": "middle",
+            textContent: orderedPins[0].pin.logical
+          }, packageGroup);
+          svgEl("text", {
+            x: centerX, y: centerY,
+            fill: "#ffffff", "font-size": 9.2, "font-weight": 950,
+            "text-anchor": "middle", "dominant-baseline": "middle",
+            transform: `rotate(-90 ${centerX} ${centerY})`,
+            textContent: component.id
+          }, packageGroup);
+          svgEl("text", {
+            x: labelX, y: bottomY - geometry.pitch * .39,
+            fill: "#dfe4e8", "font-size": 6.8, "font-weight": 850,
+            "text-anchor": "middle", "dominant-baseline": "middle",
+            textContent: orderedPins[2].pin.logical
+          }, packageGroup);
+          return;
+        }
+
+        if (component.type === "voltageRegulator") {
+          const kindDef = { name: "78L05 voltage regulator" };
+          const rolePins = { upper: "I", control: "G", lower: "O" };
           const namedPins = [rolePins.upper, rolePins.control, rolePins.lower]
             .map(name => ({ name, point: pinPoints.get(name) }))
             .filter(item => item.point);
@@ -7586,9 +8937,7 @@
           const centerY = namedPins.reduce((sum, item) => sum + item.point.y, 0) / namedPins.length;
           const orientation = String(footprint.orientation || "");
           const packageRotation = orientation.includes("below") ? 180 : orientation.includes("left") ? -90 : orientation.includes("right") ? 90 : 0;
-          const localGroup = svgEl("g", {
-            transform: `translate(${centerX} ${centerY}) rotate(${packageRotation})`
-          }, parent);
+          const localGroup = svgEl("g", { transform: `translate(${centerX} ${centerY}) rotate(${packageRotation})` }, parent);
 
           const ordered = namedPins.slice().sort((a, b) => horizontal ? a.point.x - b.point.x : a.point.y - b.point.y);
           for (const item of ordered) {
@@ -7602,26 +8951,18 @@
           const halfWidth = 25;
           const body = svgEl("path", {
             d: `M ${-halfWidth} ${frontY} L ${halfWidth} ${frontY} L ${halfWidth} ${backY + 11} A ${halfWidth} 16 0 0 0 ${-halfWidth} ${backY + 11} Z`,
-            fill: "#22282e",
-            stroke: "#9aa4ad",
-            "stroke-width": 1.35,
-            "stroke-linejoin": "round"
+            fill: "#22282e", stroke: "#9aa4ad", "stroke-width": 1.35, "stroke-linejoin": "round"
           }, localGroup);
           svgEl("title", { textContent: `${component.id} — ${kindDef.name} — ${component.value || ""}` }, body);
           svgEl("line", { x1: -halfWidth + 2, y1: frontY, x2: halfWidth - 2, y2: frontY, stroke: "#c5ccd2", "stroke-width": 1.1, opacity: .72 }, localGroup);
-
-          const kindColor = isRegulator ? "#58ff33" : kind === "pnp" ? "#e0b43e" : kind === "jfet" ? "#a64bd0" : "#17a5c6";
-          svgEl("rect", { x: -13, y: backY + 3, width: 26, height: 3.5, rx: 1.8, fill: kindColor, opacity: .9 }, localGroup);
+          svgEl("rect", { x: -13, y: backY + 3, width: 26, height: 3.5, rx: 1.8, fill: "#58ff33", opacity: .9 }, localGroup);
           svgEl("text", { x: 0, y: backY + 14, fill: "#ffffff", "font-size": 8.6, "font-weight": 900, "text-anchor": "middle", "dominant-baseline": "middle", textContent: component.id }, localGroup);
           for (const item of namedPins) {
             svgEl("text", {
               x: horizontal ? item.point.x : item.point.x - 10,
               y: horizontal ? item.point.y + 14 : item.point.y + 2.5,
-              fill: "#dfe4e8",
-              "font-size": 7.5,
-              "font-weight": 750,
-              "text-anchor": horizontal ? "middle" : "end",
-              textContent: item.name
+              fill: "#dfe4e8", "font-size": 7.5, "font-weight": 750,
+              "text-anchor": horizontal ? "middle" : "end", textContent: item.name
             }, parent);
           }
           return;
@@ -7670,6 +9011,29 @@
         }
       }
 
+
+      function routeCrossesAvoidedComponent(route, placement, includeEndpoints = true) {
+        if (!route || !placement || !linkAvoidanceAppliesTo(placement.component)) return false;
+        const a = route.points?.[0];
+        const b = route.points?.[route.points.length - 1];
+        if (!a || !b || a.x !== b.x) return false;
+        const x = a.x;
+        const minY = Math.min(a.y, b.y);
+        const maxY = Math.max(a.y, b.y);
+        if (x < placement.x || x >= placement.x + placement.footprint.width) return false;
+        const bodyStart = placement.y;
+        const bodyEnd = placement.y + placement.footprint.height - 1;
+        const routeStart = includeEndpoints ? minY : minY + 1;
+        const routeEnd = includeEndpoints ? maxY : maxY - 1;
+        return routeStart <= bodyEnd && routeEnd >= bodyStart;
+      }
+
+      function layoutHasForbiddenLinkCrossing(layout) {
+        if (!layout || state.boardSettings.avoidLinksOverComponents === false) return false;
+        return (layout.routes || []).some(route =>
+          (layout.placements || []).some(placement => routeCrossesAvoidedComponent(route, placement, true))
+        );
+      }
 
       function placementOccupiesCell(placement, x, y) {
         const fp = placement.footprint;
@@ -7899,6 +9263,7 @@
         }
         if (els.avoidLinksOverComponentsInput) els.avoidLinksOverComponentsInput.checked = state.boardSettings.avoidLinksOverComponents !== false;
         if (els.allowDoubleLinksInput) els.allowDoubleLinksInput.checked = state.boardSettings.allowDoubleLinks !== false;
+        if (els.stickyComponentsInput) els.stickyComponentsInput.checked = state.schematicSettings?.stickyComponents !== false;
         if (els.circuitNameInput) els.circuitNameInput.value = state.projectMeta?.name || '';
         if (els.circuitDescriptionInput) els.circuitDescriptionInput.value = state.projectMeta?.description || '';
       }
@@ -7963,6 +9328,7 @@
 
         clone.querySelector("#schematicGridLayer")?.remove();
         clone.querySelector("#schematicPlacementPreview")?.remove();
+        clone.querySelectorAll(".schematic-wire-hit").forEach(element => element.remove());
         clone.querySelector("#wireEditLayer")?.remove();
         clone.querySelector("#pendingWirePreview")?.remove();
         clone.querySelectorAll(".component-selected,.component-hit,.pin-hit").forEach(node => node.remove());
@@ -8053,6 +9419,74 @@
         return new XMLSerializer().serializeToString(clone);
       }
 
+      function normalizeBomText(value) {
+        return String(value ?? "").trim().replace(/\s+/g, " ") || "Unspecified";
+      }
+
+      function buildBomText() {
+        const categories = new Map();
+        const add = (category, label, amount = 1) => {
+          if (!categories.has(category)) categories.set(category, new Map());
+          const map = categories.get(category);
+          const key = normalizeBomText(label);
+          map.set(key, (map.get(key) || 0) + amount);
+        };
+
+        const seenOpampPackages = new Set();
+        for (const component of state.components) {
+          switch (component.type) {
+            case "resistor": add("Resistors", veroResistorValue(component.value || TYPE_DEFS.resistor.defaultValue)); break;
+            case "capacitor": add("Capacitors", component.value || TYPE_DEFS.capacitor.defaultValue); break;
+            case "capacitorPolarized": add("Capacitors", `${component.value || TYPE_DEFS.capacitorPolarized.defaultValue} (electrolytic)`); break;
+            case "potentiometer": add("Potentiometers", component.potResistance || TYPE_DEFS.potentiometer.defaultResistance); break;
+            case "transistor": add("Transistors", component.value || TYPE_DEFS.transistor.defaultValue); break;
+            case "diode": add("Diodes", component.value || TYPE_DEFS.diode.defaultValue); break;
+            case "led": {
+              const color = LED_COLOR_OPTIONS[ledColorOf(component)]?.label || "LED";
+              add("LEDs", `${color} LED`);
+              break;
+            }
+            case "opamp": {
+              const packageKey = opampKindOf(component) === "double" ? `dual:${opampBaseIdOf(component)}` : `single:${component.instanceUid || component.id}`;
+              if (seenOpampPackages.has(packageKey)) break;
+              seenOpampPackages.add(packageKey);
+              add("Op-amps", component.value || (opampKindOf(component) === "double" ? "TL072" : "LM741"));
+              break;
+            }
+            case "voltageRegulator": add("Voltage regulators", component.value || "78L05"); break;
+            case "switch": add("Switches", switchKindOf(component).toUpperCase()); break;
+            case "otherIC": add("Other ICs", component.value || otherIcModelOf(component)); break;
+            default: break;
+          }
+        }
+
+        const preferredOrder = ["Resistors", "Capacitors", "Potentiometers", "Transistors", "Diodes", "LEDs", "Op-amps", "Voltage regulators", "Switches", "Other ICs"];
+        const lines = [`Circuit: ${state.projectMeta?.name || circuitFileStem()}`, "Bill of Materials", ""];
+        for (const category of preferredOrder) {
+          const entries = categories.get(category);
+          if (!entries?.size) continue;
+          lines.push(`${category}:`);
+          for (const [label, quantity] of [...entries.entries()].sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: "base" }))) {
+            lines.push(`${label} - ${quantity}${quantity === 1 ? "pc" : "pcs"}`);
+          }
+          lines.push("");
+        }
+        if (lines.length === 3) lines.push("No physical components are present.", "");
+        return lines.join("\n").trimEnd() + "\n";
+      }
+
+      function exportBom() {
+        try {
+          syncProjectMetaFromInputs();
+          const bom = buildBomText();
+          const filename = `${circuitFileStem()} BOM.txt`;
+          downloadBlob(filename, new Blob([bom], { type: "text/plain;charset=utf-8" }));
+          setStatus(`Bill of materials saved as ${filename}.`);
+        } catch (error) {
+          toast(error.message || "The BOM could not be generated.", "error");
+        }
+      }
+
       function exportVeroSvg() {
         try {
           syncProjectMetaFromInputs();
@@ -8123,6 +9557,7 @@
         state.veroManualEdited = false;
         state.schematicChangedSinceVero = false;
         state.projectMeta = { name: "", description: "" };
+        state.schematicSettings = { stickyComponents: true };
         state.history = [];
         state.future = [];
         syncBoardInputs();
@@ -8150,6 +9585,7 @@
           { id: "P5", type: "terminal", value: "GND", x: 1010, y: 650, rotation: 90 }
         ];
         ensureComponentIdentities(state.components);
+        synchronizeAllTerminalScopes(state.components);
         state.wires = [
           { id: uid("W"), a: "P1:1", b: "R1:1" },
           { id: uid("W"), a: "R1:2", b: "Q1:B" },
@@ -8203,7 +9639,7 @@
                 : type === "opamp"
                   ? (selectedOpampKind === "single" ? "LM741" : "TL072")
                   : type === "potentiometer"
-                    ? String(normalized.id || "pot").toLowerCase()
+                    ? `pot${String(normalized.id || "").match(/(\d+)/)?.[1] || "1"}`
                     : type === "switch"
                       ? String(normalized.id || "switch").toLowerCase().replace(/^sw/, "switch")
                       : type === "otherIC"
@@ -8217,7 +9653,13 @@
                 id: String(component.id),
                 instanceUid: normalized.instanceUid || uid("CMP"),
                 type,
-                ...(type === "transistor" ? { transistorKind } : {}),
+                ...(type === "transistor" ? {
+                  transistorKind,
+                  transistorPinout: validTransistorPinout(normalized.transistorPinout, transistorKind)
+                    ? [...normalized.transistorPinout]
+                    : [...transistorLeadOrder(normalized)]
+                } : {}),
+                ...(type === "diode" ? { diodeKind: diodeKindOf(normalized) } : {}),
                 ...(type === "opamp" ? {
                   opampKind: selectedOpampKind,
                   opampSection: opampSectionOf(normalized),
@@ -8228,18 +9670,29 @@
                 ...(type === "otherIC" ? { otherIcModel: otherIcModelOf(normalized) } : {}),
                 ...(type === "voltageRegulator" ? { voltageRegulatorModel: voltageRegulatorModelOf(normalized) } : {}),
                 ...(type === "led" ? { ledScope: ledScopeOf(normalized), ledColor: ledColorOf(normalized) } : {}),
+                ...(type === "potentiometer" ? { potType: potTypeOf(normalized), potResistance: normalized.potResistance || TYPE_DEFS.potentiometer.defaultResistance } : {}),
                 ...(type === "terminal" ? { netScope: terminalScopeOf(normalized) } : {}),
                 value: String(normalized.value ?? defaultValue),
                 x: clamp(Number(component.x) || 100, 80, SCHEMATIC_WIDTH - 80),
                 y: clamp(Number(component.y) || 100, 80, SCHEMATIC_HEIGHT - 80),
-                rotation: ((Number(component.rotation) || 0) % 360 + 360) % 360
+                rotation: ((Number(component.rotation) || 0) % 360 + 360) % 360,
+                mirrored: Boolean(normalized.mirrored)
               };
             }).filter(component => TYPE_DEFS[component.type]);
             ensureComponentIdentities(state.components);
+            synchronizeAllTerminalScopes(state.components);
+            const potMigration = migratePotentiometerIds(state.components, data.wires.map(normalizeWireRecord));
             const validIds = new Set(state.components.map(component => component.id));
-            state.wires = migrateSecondHalfOpampPowerWires(data.wires.map(normalizeWireRecord), state.components)
+            state.wires = migrateSecondHalfOpampPowerWires(potMigration.wires, state.components)
               .filter(wire => validIds.has(splitPinKey(wire.a).componentId) && validIds.has(splitPinKey(wire.b).componentId));
-            state.counters = data.counters && typeof data.counters === "object" ? data.counters : {};
+            state.counters = data.counters && typeof data.counters === "object" ? { ...data.counters } : {};
+            delete state.counters.POT;
+            const maxVr = state.components.filter(component => component.type === "potentiometer")
+              .reduce((max, component) => Math.max(max, Number(String(component.id).match(/(\d+)/)?.[1]) || 0), 0);
+            state.counters.VR = Math.max(Number(state.counters.VR) || 0, maxVr);
+            state.schematicSettings = {
+              stickyComponents: data.schematicSettings?.stickyComponents !== false
+            };
             state.boardSettings = {
               maxColumns: clamp(Number(data.boardSettings?.maxColumns) || 20, 8, 80),
               busSpacing: Number(data.boardSettings?.busSpacing) === 2 ? 2 : 1,
@@ -8254,13 +9707,15 @@
             };
             clearSchematicSelection();
             state.pendingWirePin = null;
-            state.veroLayout = null;
-            state.veroSelection = null;
-            state.veroDrag = null;
-            state.veroHistory = [];
-            state.veroFuture = [];
-            state.veroManualEdited = false;
-            state.schematicChangedSinceVero = false;
+            if (!restoreProjectVeroLayout(data.veroLayout)) {
+              state.veroLayout = null;
+              state.veroSelection = null;
+              state.veroDrag = null;
+              state.veroHistory = [];
+              state.veroFuture = [];
+              state.veroManualEdited = false;
+              state.schematicChangedSinceVero = false;
+            }
             state.history = [];
             state.future = [];
             syncBoardInputs();
@@ -8268,8 +9723,8 @@
             renderAll();
             switchView("schematic");
             setTool("select");
-            toast("Project opened.", "success");
-            setStatus(`Opened ${file.name}.`);
+            toast(state.veroLayout ? "Project and saved Vero layout opened." : "Project opened.", "success");
+            setStatus(state.veroLayout ? `Opened ${file.name} with its saved Vero layout.` : `Opened ${file.name}.`);
           } catch (error) {
             toast(error.message || "The project could not be opened.", "error");
           }
@@ -8286,9 +9741,10 @@
         }
         const centerX = (Math.min(...components.map(component => component.x)) + Math.max(...components.map(component => component.x))) / 2;
         const centerY = (Math.min(...components.map(component => component.y)) + Math.max(...components.map(component => component.y))) / 2;
+        const zoom = state.schematicZoom || 1;
         els.schematicWrap.scrollTo({
-          left: Math.max(0, centerX - els.schematicWrap.clientWidth / 2),
-          top: Math.max(0, centerY - els.schematicWrap.clientHeight / 2),
+          left: Math.max(0, centerX * zoom - els.schematicWrap.clientWidth / 2),
+          top: Math.max(0, centerY * zoom - els.schematicWrap.clientHeight / 2),
           behavior: "smooth"
         });
       }
@@ -8308,7 +9764,8 @@
       async function placeFromTool(tool, point) {
         if (tool.startsWith("terminal:")) {
           let label = tool.slice("terminal:".length);
-          if (label === "CUSTOM") {
+          const customLabel = label === "CUSTOM";
+          if (customLabel) {
             const result = await showAppMessage({
               title: "Create net label",
               message: "Enter the name that should identify this electrical net.",
@@ -8321,7 +9778,9 @@
             if (result === null) return;
             label = normalizeNetLabel(result || "NET");
           }
-          addComponent("terminal", point.x, point.y, label, null, state.placementRotation || 0);
+          addComponent("terminal", point.x, point.y, label, null, state.placementRotation || 0, {
+            netScope: customLabel ? "onboard" : "offboard"
+          });
           return;
         }
         if (TYPE_DEFS[tool]) addComponent(tool, point.x, point.y, null, null, state.placementRotation || 0);
@@ -8337,8 +9796,9 @@
         const point = clientToSvg(els.schematicSvg, event.clientX, event.clientY);
         state.pointerWorld = { x: snap(point.x), y: snap(point.y) };
 
-        if (pinTarget && state.tool === "wire") {
+        if (pinTarget) {
           const key = pinKey(pinTarget.dataset.pinComponent, pinTarget.dataset.pinName);
+          if (state.tool !== "wire") setTool("wire");
           if (!state.pendingWirePin) {
             state.pendingWirePin = key;
             setStatus(`First pin: ${key.replace(":", ".")}. Click the destination pin.`);
@@ -8350,7 +9810,8 @@
           return;
         }
 
-        if (wireEditTarget && state.tool === "select") {
+        if (wireEditTarget) {
+          if (state.tool !== "select") setTool("select");
           const wire = getWire(wireEditTarget.dataset.wireEditId);
           if (!wire) return;
           const aInfo = splitPinKey(wire.a);
@@ -8378,7 +9839,8 @@
           return;
         }
 
-        if (wireTarget && state.tool === "select") {
+        if (wireTarget) {
+          if (state.tool !== "select") setTool("select");
           clearSchematicSelection();
           state.selected = { kind: "wire", id: wireTarget.dataset.wireId };
           renderAll();
@@ -8437,9 +9899,8 @@
 
         if (!componentTarget && !wireTarget && state.tool === "wire") {
           state.pendingWirePin = null;
-          clearSchematicSelection();
-          setTool("select");
-          setStatus("Select mode: wire drawing cancelled.");
+          renderSchematic();
+          setStatus("Wire mode: pending wire cancelled. Click a component pin to start another wire, or press F1 for Select.");
           event.preventDefault();
           return;
         }
@@ -8452,10 +9913,21 @@
 
       function onSchematicContextMenu(event) {
         event.preventDefault();
+        const placementToolActive = state.tool !== "select" && state.tool !== "wire";
         state.pendingWirePin = null;
         state.drag = null;
-        setTool("select");
-        setStatus("Select mode.");
+
+        // Right-click is the one automatic tool change retained for component
+        // placement: it drops the component preview and returns to Select.
+        // In Select or Wire mode it only cancels the current action and keeps
+        // the active tool unchanged.
+        if (placementToolActive) {
+          setTool("select");
+          setStatus("Select mode: component placement cancelled.");
+          return;
+        }
+
+        setStatus(`${state.tool === "wire" ? "Wire" : "Select"} mode: active action cancelled.`);
         renderSchematic();
       }
 
@@ -8530,10 +10002,16 @@
           renderAll();
           setStatus("Wire route updated and snapped to the schematic grid.");
         } else if (drag.kind === "components") {
+          const stickyResult = stickyConnectMovedComponents((drag.origins || []).map(origin => origin.id));
           invalidateGeneratedLayout();
           recordState();
           renderAll();
-          setStatus(`${drag.origins.length} component${drag.origins.length === 1 ? "" : "s"} moved and snapped to the grid.`);
+          const stickyText = stickyResult.connections
+            ? ` ${stickyResult.connections} sticky connection${stickyResult.connections === 1 ? "" : "s"} added.`
+            : stickyResult.ambiguous
+              ? " A pin landed on crossing nets, so no automatic connection was made."
+              : "";
+          setStatus(`${drag.origins.length} component${drag.origins.length === 1 ? "" : "s"} moved and snapped to the grid.${stickyText}`);
         }
       }
 
@@ -8587,11 +10065,14 @@
 
         document.getElementById("rotateLeftBtn").addEventListener("click", () => rotateSelected(-90));
         document.getElementById("rotateRightBtn").addEventListener("click", () => rotateSelected(90));
+        els.flipMirrorBtn.addEventListener("click", flipSelected);
         document.getElementById("duplicateBtn").addEventListener("click", duplicateSelected);
         document.getElementById("deleteBtn").addEventListener("click", deleteSelection);
 
         els.propTransistorType.addEventListener("change", () => changeSelectedTransistorKind(els.propTransistorType.value));
         els.propTransistorModel.addEventListener("change", () => changeSelectedTransistorModel(els.propTransistorModel.value));
+        els.propDiodeType.addEventListener("change", () => changeSelectedDiodeKind(els.propDiodeType.value));
+        els.propDiodeModel.addEventListener("change", () => changeSelectedDiodeModel(els.propDiodeModel.value));
         els.propOpampType.addEventListener("change", () => changeSelectedOpampKind(els.propOpampType.value));
         els.propOpampModel.addEventListener("change", () => changeSelectedOpampModel(els.propOpampModel.value));
         els.propSwitchType.addEventListener("change", () => changeSelectedSwitchKind(els.propSwitchType.value));
@@ -8631,11 +10112,13 @@
         els.propNetScope.addEventListener("change", () => {
           const components = selectedComponents();
           if (components.length !== 1 || components[0].type !== "terminal") return;
-          components[0].netScope = els.propNetScope.value === "onboard" ? "onboard" : "offboard";
+          const component = components[0];
+          const scope = setTerminalScopeForLabel(component.value, els.propNetScope.value);
+          const count = terminalComponentsForLabel(component.value).length;
           invalidateGeneratedLayout();
           recordState();
           renderAll();
-          setStatus(`${components[0].id} is now an ${components[0].netScope} net label.`);
+          setStatus(`${normalizeNetLabel(component.value)} is now an ${scope} net across ${count} label${count === 1 ? "" : "s"}.`);
         });
 
         els.propValue.addEventListener("change", () => {
@@ -8644,7 +10127,11 @@
           let component = components[0];
           const entered = els.propValue.value.trim();
           if (component.type === "terminal") {
-            component.value = normalizeNetLabel(entered);
+            const nextLabel = normalizeNetLabel(entered);
+            const existing = terminalComponentsForLabel(nextLabel).filter(item => item !== component);
+            const inheritedScope = existing.length ? commonTerminalScope(nextLabel) : terminalScopeOf(component);
+            component.value = nextLabel;
+            setTerminalScopeForLabel(nextLabel, inheritedScope);
           } else if (component.type === "transistor") {
             const model = entered || transistorModelsForKind(transistorKindOf(component))[0];
             const modelKind = transistorKindForModel(model);
@@ -8652,7 +10139,16 @@
               changeSelectedTransistorKind(modelKind);
               component = getComponent(state.selected.id);
             }
-            if (component) component.value = model;
+            if (component) {
+              component.value = model;
+              const family = transistorFamilyData(model);
+              if (family) component.transistorPinout = [...family.order];
+            }
+          } else if (component.type === "diode") {
+            const model = entered || diodeModelsForKind(diodeKindOf(component))[0];
+            component.value = model;
+            const inferredKind = inferredDiodeKindFromModel(model);
+            if (inferredKind) component.diodeKind = inferredKind;
           } else if (component.type === "opamp") {
             const kind = opampKindOf(component);
             const model = entered || opampModelsForKind(kind)[0];
@@ -8675,6 +10171,30 @@
           setStatus(`${component.id} updated.`);
         });
 
+        els.propPotType.addEventListener("change", () => {
+          const components = selectedComponents();
+          if (components.length !== 1 || components[0].type !== "potentiometer") return;
+          const component = components[0];
+          const nextType = canonicalPotType(els.propPotType.value);
+          if (potTypeOf(component) === nextType) return;
+          component.potType = nextType;
+          invalidateGeneratedLayout();
+          recordState();
+          renderAll();
+          setStatus(`${component.id} changed to ${nextType === "trimmer" ? "an onboard trimmer" : "an offboard potentiometer"}. Generate Vero to apply the physical change.`);
+        });
+
+        els.propPotResistance.addEventListener("change", () => {
+          const components = selectedComponents();
+          if (components.length !== 1 || components[0].type !== "potentiometer") return;
+          const component = components[0];
+          component.potResistance = els.propPotResistance.value.trim() || TYPE_DEFS.potentiometer.defaultResistance;
+          invalidateGeneratedLayout();
+          recordState();
+          renderAll();
+          setStatus(`${component.id} resistance updated to ${component.potResistance}.`);
+        });
+
         const updateProjectMeta = () => {
           syncProjectMetaFromInputs();
           recordState();
@@ -8690,11 +10210,27 @@
           });
         });
 
+        els.copySchematicBtn.addEventListener("click", () => copySelectedSchematic());
+        els.pasteSchematicBtn.addEventListener("click", () => pasteSchematicClipboard());
+        els.schematicZoomOutBtn.addEventListener("click", () => {
+          state.schematicZoom = clamp(state.schematicZoom - .1, .25, 2.5);
+          applySchematicZoom();
+        });
+        els.schematicZoomInBtn.addEventListener("click", () => {
+          state.schematicZoom = clamp(state.schematicZoom + .1, .25, 2.5);
+          applySchematicZoom();
+        });
+        els.schematicZoomResetBtn.addEventListener("click", fitSchematicToViewport);
         document.getElementById("centerSelectionBtn").addEventListener("click", centerSelected);
         document.getElementById("clearWiresBtn").addEventListener("click", clearWires);
         document.getElementById("exportSchematicPngBtn").addEventListener("click", exportSchematicPng);
+        els.stickyComponentsInput.addEventListener("change", () => {
+          state.schematicSettings.stickyComponents = els.stickyComponentsInput.checked;
+          recordState();
+          setStatus(`Sticky components ${state.schematicSettings.stickyComponents ? "enabled" : "disabled"}.`);
+        });
         document.getElementById("exportNetlistBtn").addEventListener("click", exportNetlist);
-        document.getElementById("exportSvgBtn").addEventListener("click", exportVeroSvg);
+        document.getElementById("exportBomBtn").addEventListener("click", exportBom);
         document.getElementById("exportPngBtn").addEventListener("click", exportVeroPng);
 
         document.getElementById("zoomOutBtn").addEventListener("click", () => {
@@ -8728,7 +10264,7 @@
         els.avoidLinksOverComponentsInput.addEventListener("change", () => {
           state.boardSettings.avoidLinksOverComponents = els.avoidLinksOverComponentsInput.checked;
           recordState();
-          setStatus(`${state.boardSettings.avoidLinksOverComponents ? "Links will avoid resistors, capacitors, diodes, and LEDs." : "Links may cross passive component bodies."} Links beneath ICs and op-amps remain allowed. Press Regenerate layout to apply it.`);
+          setStatus(`${state.boardSettings.avoidLinksOverComponents ? "Links will avoid discrete components, including regulators and transistors." : "Links may cross discrete component bodies."} Links beneath ICs and op-amps remain allowed. Press Regenerate layout to apply it.`);
         });
 
         els.allowDoubleLinksInput.addEventListener("change", () => {
@@ -8758,11 +10294,24 @@
 
         document.getElementById("togglePaletteBtn").addEventListener("click", () => els.leftSidebar.classList.toggle("open"));
         document.getElementById("toggleInspectorBtn").addEventListener("click", () => els.rightSidebar.classList.toggle("open"));
+        els.rightSidebarNotch.addEventListener("click", () => setRightSidebarCollapsed(!state.rightSidebarCollapsed));
 
         window.addEventListener("keydown", event => {
           const tag = document.activeElement?.tagName;
           const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
           const meta = event.ctrlKey || event.metaKey;
+          if (event.key === "F1") {
+            event.preventDefault();
+            if (state.view !== "schematic") switchView("schematic");
+            setTool("select");
+            return;
+          }
+          if (event.key === "F2") {
+            event.preventDefault();
+            if (state.view !== "schematic") switchView("schematic");
+            setTool("wire");
+            return;
+          }
           if (meta && event.key.toLowerCase() === "z") {
             event.preventDefault();
             if (state.view === "vero" && state.veroLayout && !state.veroLayout.error) event.shiftKey ? redoVeroEdit() : undoVeroEdit();
@@ -8785,10 +10334,21 @@
             selectAllSchematicComponents();
             return;
           }
+          if (meta && event.key.toLowerCase() === "c" && !typing && state.view === "schematic") {
+            event.preventDefault();
+            copySelectedSchematic();
+            return;
+          }
+          if (meta && event.key.toLowerCase() === "v" && !typing && state.view === "schematic") {
+            event.preventDefault();
+            pasteSchematicClipboard();
+            return;
+          }
           if (typing) return;
           if (event.key === "Delete" || event.key === "Backspace") {
             event.preventDefault();
-            deleteSelection();
+            if (state.view === "vero") void deleteSelectedVeroItem();
+            else deleteSelection();
           } else if (event.key.toLowerCase() === "r") {
             event.preventDefault();
             if (state.view === "schematic" && state.tool !== "select" && state.tool !== "wire") {
@@ -8798,6 +10358,9 @@
             } else {
               rotateSelected(90);
             }
+          } else if (event.key.toLowerCase() === "f" && state.view === "schematic") {
+            event.preventDefault();
+            flipSelected();
           } else if (event.key === "Escape") {
             if (state.view === "vero") {
               state.veroSelection = null;
@@ -8808,8 +10371,8 @@
             }
             state.pendingWirePin = null;
             state.drag = null;
-            setTool("select");
             renderSchematic();
+            setStatus(`${state.tool === "wire" ? "Wire" : state.tool === "select" ? "Select" : "Placement"} mode: active action cancelled.`);
           } else if (event.key.toLowerCase() === "v") {
             void requestVeroGeneration();
           }
@@ -8832,9 +10395,9 @@
           }
           if (saved) {
             restoreSnapshot(saved);
-            const normalized = projectSnapshot();
+            const normalized = projectSnapshot({ includeVero: false });
             state.history = [normalized];
-            try { localStorage.setItem(AUTOSAVE_KEY, normalized); } catch (_) { /* storage may be read-only */ }
+            try { localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(projectPayload({ includeVero: true }))); } catch (_) { /* storage may be read-only */ }
             restored = true;
           }
         } catch (_) { /* localStorage may be blocked */ }
@@ -8845,10 +10408,12 @@
         }
         updateHistoryButtons();
         setTool("select");
+        applySchematicZoom();
+        setRightSidebarCollapsed(false);
         setStatus(restored ? "Autosaved project restored." : "Ready. Place a component or load the example circuit.");
       }
 
-      window.__VD = { buildTrackCentricLayout, buildTrackRowAssignment, constructTrackPlacement, scoreTrackPlacementFast, state, restoreSnapshot, projectSnapshot, deriveNets, buildBoardElectricalComponents, componentPlacementMetadata, boardFootprintVariants, evaluateCompactPlacement, buildVeroLayout, renderVero, refreshManualLayoutConnectivity, removeCompletelyUnusedBoardLines, isLayoutBetter, layoutQualityTuple, compactPlacementSweeps, refineCompactPlacement, buildGreedyPlacement, seededRandom, hashString, setTool, renderAll, buildCopperTopology, requiredLandingDefects, selectEdgeTerminalPads, routingColumnCandidates, insertRoutingColumn, assignNonOverlappingLinkColumns, segmentAvailableHoleXs, bestSegmentLink, linkAvoidanceAppliesTo, terminalScopeOf, isOffboardComponent, externalControlName, terminalPreferredSide, routeNetIndex, cloneEndpointUseMap, addLinkEndpointUse, computeDoubleLinkHoles, lineObstacleCount, canUseLinkEndpoint, endpointIsAccessible, componentIdentity, ensureComponentIdentities, schematicStructureSignature, reassignAllComponentIds, updateExistingVeroFromSchematic, newProject, generateVero };
+      window.__VD = { addComponent, placeFromTool, buildBomText, exportBom, deleteSelectedVeroItem, layoutHasForbiddenLinkCrossing, stickyConnectMovedComponents, applySchematicZoom, fitSchematicToViewport, setRightSidebarCollapsed, transistorLeadOrder, transistorFamilyData, buildTrackCentricLayout, buildTrackRowAssignment, constructTrackPlacement, scoreTrackPlacementFast, state, restoreSnapshot, projectSnapshot, projectPayload, serializeVeroLayoutForProject, deserializeVeroLayoutFromProject, restoreProjectVeroLayout, deriveNets, buildBoardElectricalComponents, componentPlacementMetadata, boardFootprintVariants, evaluateCompactPlacement, buildVeroLayout, renderVero, refreshManualLayoutConnectivity, removeCompletelyUnusedBoardLines, isLayoutBetter, layoutQualityTuple, compactPlacementSweeps, refineCompactPlacement, buildGreedyPlacement, seededRandom, hashString, setTool, renderAll, buildCopperTopology, requiredLandingDefects, selectEdgeTerminalPads, routingColumnCandidates, insertRoutingColumn, assignNonOverlappingLinkColumns, segmentAvailableHoleXs, bestSegmentLink, linkAvoidanceAppliesTo, edgeTerminalRowsByColumn, routeOverlapsEdgeTerminal, routeOverlapsLayoutEdgeTerminal, validateManualVeroLayout, terminalScopeOf, isOffboardComponent, externalControlName, terminalPreferredSide, routeNetIndex, cloneEndpointUseMap, addLinkEndpointUse, computeDoubleLinkHoles, lineObstacleCount, canUseLinkEndpoint, endpointIsAccessible, componentIdentity, ensureComponentIdentities, schematicStructureSignature, reassignAllComponentIds, updateExistingVeroFromSchematic, newProject, generateVero };
       initialize();
     })();
   </script>
