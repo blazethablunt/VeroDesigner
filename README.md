@@ -1,12 +1,15 @@
 # Vero Designer
+![GitHub Release](https://img.shields.io/github/v/release/blazethablunt/veroDesigner) [![See What's New](https://img.shields.io/badge/See-What's_New-blue)](#whats-new) ![Static Badge](https://img.shields.io/badge/dependencies-none-red) ![GitHub Repo stars](https://img.shields.io/github/stars/blazethablunt/veroDesigner)
+
+
 
 Vero Designer is an automatic Vero layout generator that converts electronic schematics into buildable stripboard (Vero) layouts.
 
 Simply draw your schematic, click **Generate Vero**, and Vero Designer will create a Vero layout ready for your next project.
 
-![image alt](https://github.com/blazethablunt/VeroDesigner/blob/8716f07b9a0e0129d6802d445a81a264514ca792/soss.png)
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/15af387eeed43089cafe2e3abc69304f792e8856/screenshots/soss2.png)
 
-![image alt](https://github.com/blazethablunt/VeroDesigner/blob/8716f07b9a0e0129d6802d445a81a264514ca792/sos.png)
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/15af387eeed43089cafe2e3abc69304f792e8856/screenshots/sos2.png)
 
 ---
 
@@ -41,6 +44,7 @@ You can:
 * Move links (jumpers)
 * Move strip cuts
 * Resize the board using the bottom-right resize handle
+* Delete links/cuts **\*NEW\***
 
 When a strip cut is placed beneath a component, the component's opacity is automatically reduced to improve visibility.
 
@@ -62,7 +66,7 @@ Each net supports two placement modes:
 * **Offboard** – Creates a connection point on the edge of the Vero board.
 * **Onboard** – Creates an internal label only.
 
-All nets default to **Offboard**, but this can be changed at any time.
+Quick nets default to **Offboard**, while custom nets default to **Onboard**, but this can be changed at any time.
 
 ---
 
@@ -102,16 +106,7 @@ You can also:
 * Potentiometers
 * Switches
 * LEDs
-
-### Voltage Regulators
-
-* 5V Voltage Regulator
-
-### Integrated Circuits
-
-Currently supported:
-
-* PT2399
+* Trimmers **\*NEW\***
 
 ### Operational Amplifiers
 
@@ -132,25 +127,78 @@ Currently supported:
 
 * BC547
 * 2N3904
+* BC548 **\*NEW\***
+* BC549 **\*NEW\***
+* BC550 **\*NEW\***
 
 **BJT (PNP)**
 
 * BC557
 * 2N3906
+* BC558 **\*NEW\***
+* BC559 **\*NEW\***
+* BC550 **\*NEW\***
 
 **JFET**
 
 * J201
 * 2N5457
 * 2N5459
+* 2N5458 **\*NEW\***
 
+### Integrated Circuits
+
+Currently supported:
+
+* PT2399
+
+### Voltage Regulators
+
+* 5V Voltage Regulator
+  
 ---
 
 ## Offline Use
 
 Vero Designer has no external dependencies.
 
-You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.0.40/index.html) the HTML file and run it completely offline in your web browser.
+You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.1.0/index.html) the HTML file and run it completely offline in your web browser.
+
+---
+
+## What's New
+### Version 1.1.0
+
+* Added "sticky components" option
+* Added flip (mirror) component option
+* Added Copy/Paste buttons
+* Added schematic view zoom
+* Added minimize right sidebar option
+* Added transistor models
+* Added trim pots
+* Added SP3T & DP3T
+* Added zener & schottky diodes
+* Added potentiometer resistance value field
+* Added "Export BOM" button
+* Improved component selection
+* Improved wiring & wires selection
+* Improved tool switching
+* Fixed component connection points drawn off-grid
+* Fixed transistor displayed wrong package orientation
+* Fixed polarized capacitor schematic symbol
+* Fixed component symbol sizes
+* Fixed "Input" quick label orientation
+* Fixed op-amp text
+* Links & cuts can be deleted from the generated layout
+* Changed transistor look & feel
+* Generated vero saved with the project file
+* Custom net labels default to "Onboard"
+* Changing net label affects duplicates
+* Broken net/physical short message highlighted in red
+
+
+ 
+
 
 
 
