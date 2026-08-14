@@ -83,8 +83,8 @@ The **Vero Settings** section provides several useful options, including:
 * **Component opacity**
 * **Update IDs** – Reassigns IDs to all schematic components (schematic page only)
 * **Update Vero** – Applies schematic changes to the existing Vero layout without generating a new layout
-* **Regenerate Layout** – Generates a completely new layout after major schematic changes
-* **Auto Describe** – Generates a description for the layout based on used components **\*NEW\***
+* **Regenerate layout** – Generates a completely new layout after major schematic changes
+* **Auto describe** – Generates a description for the layout based on used components **\*NEW\***
 * **Standing resistors** – Optional feature to save space, off by default **\*NEW\***
 
 ---
