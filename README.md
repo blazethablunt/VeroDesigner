@@ -11,20 +11,19 @@ Vero Designer is an automatic Vero layout generator that converts electronic sch
 
 Simply draw your schematic, click **Generate Vero**, and Vero Designer will create a Vero layout ready for your next project.
 
-![image alt](https://github.com/blazethablunt/VeroDesigner/blob/15af387eeed43089cafe2e3abc69304f792e8856/screenshots/soss2.png)
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/6a879b6973c17424ade8f4feb4defaa748776c8d/screenshots/soss.png)
 
-![image alt](https://github.com/blazethablunt/VeroDesigner/blob/15af387eeed43089cafe2e3abc69304f792e8856/screenshots/sos2.png)
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/6a879b6973c17424ade8f4feb4defaa748776c8d/screenshots/sos.png)
 
 ---
 
 ## Manual VS Automatic
 
 The following example compares a manually designed stripboard layout with one generated automatically by Vero Designer.
-The generated layout required no manual editing. 
 
 Despite being created automatically, it produces a layout nearly identical in size and overall efficiency to one designed by an experienced human builder.
 
-![image alt](https://github.com/blazethablunt/VeroDesigner/blob/36137a4fac1d879d4df5c459f1d175e3580945cc/d%2B%20comp.png)
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/6a879b6973c17424ade8f4feb4defaa748776c8d/screenshots/d%2B%20comparison.png)
 
 ---
 
@@ -48,7 +47,7 @@ You can:
 * Move links (jumpers)
 * Move strip cuts
 * Resize the board using the bottom-right resize handle
-* Delete links/cuts **\*NEW\***
+* Delete links/cuts
 
 When a strip cut is placed beneath a component, the component's opacity is automatically reduced to improve visibility.
 
@@ -80,11 +79,13 @@ Connection nets are automatically detected, grouped, and color-coded. They are d
 
 The **Vero Settings** section provides several useful options, including:
 
-* Maximum board columns
-* Component opacity
+* **Maximum board columns**
+* **Component opacity**
 * **Update IDs** – Reassigns IDs to all schematic components (schematic page only)
 * **Update Vero** – Applies schematic changes to the existing Vero layout without generating a new layout
 * **Regenerate Layout** – Generates a completely new layout after major schematic changes
+* **Auto Describe** – Generates a description for the layout based on used components **\*NEW\***
+* **Standing resistors** – Optional feature to save space, off by default **\*NEW\***
 
 ---
 
@@ -97,20 +98,26 @@ You can also:
 * Give your circuit a name
 * Add a project description
 * Export PNG images from both the schematic editor and the generated Vero layout
+* Export BOM
+* Import .kicad_sch files  **\*NEW\***
+
+
+![image alt](https://i.ibb.co/VWDH2ktB/import-Button.png)
 
 ---
 
 ## Available Components
 
-### Passive Components
-
 * Resistors
 * Capacitors
+* Op-Amps
+* Transistors
 * Diodes
 * Potentiometers
 * Switches
 * LEDs
-* Trimmers **\*NEW\***
+* Trimmers
+* 5V Voltage Regulator
 
 ### Operational Amplifiers
 
@@ -120,10 +127,25 @@ You can also:
 * NE5532
 * LM833
 * JRC4558
+* OPA2134 **\*NEW\***
+* TL082 **\*NEW\***
+* JRC4580 **\*NEW\***
+* LM358 **\*NEW\***
 
 **Single**
 
 * LM741
+* NE5534 **\*NEW\***
+* TL071 **\*NEW\***
+* LM308 **\*NEW\***
+* OPA134 **\*NEW\***
+
+**Quad**
+
+* LM324 **\*NEW\***
+* TL064 **\*NEW\***
+* TL074 **\*NEW\***
+* TL084 **\*NEW\***
 
 ### Transistors
 
@@ -131,34 +153,44 @@ You can also:
 
 * BC547
 * 2N3904
-* BC548 **\*NEW\***
-* BC549 **\*NEW\***
-* BC550 **\*NEW\***
+* BC548
+* BC549
+* BC550
+* MPSA13 **\*NEW\***
+* MPSA14 **\*NEW\***
+* MPSA18 **\*NEW\***
+* BC184 **\*NEW\***
 
 **BJT (PNP)**
 
 * BC557
 * 2N3906
-* BC558 **\*NEW\***
-* BC559 **\*NEW\***
-* BC550 **\*NEW\***
+* BC558
+* BC559
+* BC550
 
 **JFET**
 
 * J201
 * 2N5457
+* 2N5458
 * 2N5459
-* 2N5458 **\*NEW\***
+* 2N3819 **\*NEW\***
+* 2N5484 **\*NEW\***
+* MPF102 **\*NEW\***
+* MPF103 **\*NEW\***
+* BF245 **\*NEW\***
+* 2SK30A **\*NEW\***
+* 2SK117 **\*NEW\***
 
 ### Integrated Circuits
 
-Currently supported:
-
 * PT2399
-
-### Voltage Regulators
-
-* 5V Voltage Regulator
+* NE555 **\*NEW\***
+* LM386 **\*NEW\***
+* LM13700 **\*NEW\***
+* LM3914 **\*NEW\***
+* LM3915 **\*NEW\***
   
 ---
 
@@ -166,43 +198,26 @@ Currently supported:
 
 Vero Designer has no external dependencies.
 
-You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.1.0/index.html) the HTML file and run it completely offline in your web browser.
+You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.2.0/Vero.Designer.1.2.0.html) the HTML file and run it completely offline in your web browser.
 
 ---
 
 ## What's New
-### Version 1.1.0
+### Version 1.2.0
 
-* Added "sticky components" option
-* Added flip (mirror) component option
-* Added Copy/Paste buttons
-* Added schematic view zoom
-* Added minimize right sidebar option
-* Added transistor models
-* Added trim pots
-* Added SP3T & DP3T
-* Added zener & schottky diodes
-* Added potentiometer resistance value field
-* Added "Export BOM" button
-* Improved component selection
-* Improved wiring & wires selection
-* Improved tool switching
-* Fixed component connection points drawn off-grid
-* Fixed transistor displayed wrong package orientation
-* Fixed polarized capacitor schematic symbol
-* Fixed component symbol sizes
-* Fixed "Input" quick label orientation
-* Fixed op-amp text
-* Links & cuts can be deleted from the generated layout
-* Changed transistor look & feel
-* Generated vero saved with the project file
-* Custom net labels default to "Onboard"
-* Changing net label affects duplicates
-* Broken net/physical short message highlighted in red
-
-
- 
-
-
-
-
+* Added KiCad importer (**BETA**)
+* Added marquee selection
+* Added new component models
+* Added Auto-describe
+* Added generic IC (under "Other IC's")
+* Added 3PST & 3PDT
+* Added ground symbol to GND quick net
+* Added new icons for the editing tools
+* Added standing resistors option
+* Added duplicate shortcut (Ctrl/Cmd+D)
+* Expanded grid
+* Improved wiring (each line is editable)
+* Fixed transistor's schematic symbol pinout letters
+* Fixed component icons on left sidebar
+* Moved layout to the center
+* "Checks" tab shows which component is unconnected
