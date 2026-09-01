@@ -202,6 +202,11 @@ You can also:
 * LM13700 
 * LM3914 
 * LM3915
+
+**Tubes**
+
+* 12AX7 **\*NEW\***
+* 12AU7 **\*NEW\***
   
 ---
 
