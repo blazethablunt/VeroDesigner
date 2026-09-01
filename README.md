@@ -202,6 +202,7 @@ You can also:
 * LM13700 
 * LM3914 
 * LM3915
+* Daisy IC **\*NEW\***
 
 **Tubes**
 
