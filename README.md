@@ -3,7 +3,10 @@
   <span margin-top:"0">Vero Designer</span>
 </h1>
 
-![GitHub Release](https://img.shields.io/github/v/release/blazethablunt/veroDesigner) [![See What's New](https://img.shields.io/badge/See-What's_New-blue)](#whats-new) ![Static Badge](https://img.shields.io/badge/dependencies-none-red) ![GitHub Repo stars](https://img.shields.io/github/stars/blazethablunt/veroDesigner)
+[![GitHub Release](https://img.shields.io/github/v/release/blazethablunt/VeroDesigner)](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.3.0/Vero_Designer_1.3.0.html) [![See What's New](https://img.shields.io/badge/See-What's_New-blue)](#whats-new) ![Static Badge](https://img.shields.io/badge/dependencies-none-red) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/blazethablunt/verodesigner/total)
+ ![GitHub Repo stars](https://img.shields.io/github/stars/blazethablunt/veroDesigner) 
+
+
 
 
 
@@ -21,7 +24,7 @@ Simply draw your schematic, click **Generate Vero**, and Vero Designer will crea
 
 Click the image to watch the full walkthrough video 
 
-[![Vero Designer Demo](https://img.youtube.com/vi/3N8e078Pl40/maxresdefault.jpg)](https://www.youtube.com/watch?v=3N8e078Pl40)
+[![Vero Designer Demo](https://i.ibb.co/6J4vbY21/verodesigner-thumb-github.png)](https://www.youtube.com/watch?v=3N8e078Pl40)
 
 ---
 
