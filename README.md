@@ -7,13 +7,21 @@
 
 
 
-Vero Designer is an automatic Vero layout generator that converts electronic schematics into buildable stripboard (Vero) layouts.
+Vero Designer is an automatic vero layout generator that converts electronic schematics into buildable stripboard layouts.
 
-Simply draw your schematic, click **Generate Vero**, and Vero Designer will create a Vero layout ready for your next project.
+Simply draw your schematic, click **Generate Vero**, and Vero Designer will create a vero layout ready for your next project.
 
 ![image alt](https://github.com/blazethablunt/VeroDesigner/blob/da29e9d6d0868b72613d06b9ee6b693afcf495da/screenshots/soss.png)
 
 ![image alt](https://github.com/blazethablunt/VeroDesigner/blob/da29e9d6d0868b72613d06b9ee6b693afcf495da/screenshots/sos.png)
+
+---
+
+## Walkthrough
+
+Click the image to watch the full walkthrough video 
+
+[![Vero Designer Demo](https://img.youtube.com/vi/3N8e078Pl40/maxresdefault.jpg)](https://www.youtube.com/watch?v=3N8e078Pl40)
 
 ---
 
@@ -39,7 +47,7 @@ Use the left sidebar to select components and place them on the schematic grid.
 
 ## Editing the Generated Vero Layout
 
-The generated Vero layout includes editing features, allowing you to fine-tune the result before building.
+The generated vero layout includes editing features, allowing you to fine-tune the result before building.
 
 You can:
 
@@ -215,7 +223,7 @@ You can also:
 
 Vero Designer has no external dependencies.
 
-You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.2.0/Vero.Designer.1.2.0.html) the HTML file and run it completely offline in your web browser.
+You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.3.0/Vero_Designer_1.3.0.html) the HTML file and run it completely offline in your web browser.
 
 ---
 
