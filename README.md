@@ -3,17 +3,28 @@
   <span margin-top:"0">Vero Designer</span>
 </h1>
 
-![GitHub Release](https://img.shields.io/github/v/release/blazethablunt/veroDesigner) [![See What's New](https://img.shields.io/badge/See-What's_New-blue)](#whats-new) ![Static Badge](https://img.shields.io/badge/dependencies-none-red) ![GitHub Repo stars](https://img.shields.io/github/stars/blazethablunt/veroDesigner)
+[![GitHub Release](https://img.shields.io/github/v/release/blazethablunt/VeroDesigner)](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.3.0/Vero_Designer_1.3.0.html) [![See What's New](https://img.shields.io/badge/See-What's_New-blue)](#whats-new) ![Static Badge](https://img.shields.io/badge/dependencies-none-red) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/blazethablunt/verodesigner/total)
+ ![GitHub Repo stars](https://img.shields.io/github/stars/blazethablunt/veroDesigner) 
 
 
 
-Vero Designer is an automatic Vero layout generator that converts electronic schematics into buildable stripboard (Vero) layouts.
 
-Simply draw your schematic, click **Generate Vero**, and Vero Designer will create a Vero layout ready for your next project.
 
-![image alt](https://github.com/blazethablunt/VeroDesigner/blob/6a879b6973c17424ade8f4feb4defaa748776c8d/screenshots/soss.png)
+Vero Designer is an automatic vero layout generator that converts electronic schematics into buildable stripboard layouts.
 
-![image alt](https://github.com/blazethablunt/VeroDesigner/blob/6a879b6973c17424ade8f4feb4defaa748776c8d/screenshots/sos.png)
+Simply draw your schematic, click **Generate Vero**, and Vero Designer will create a vero layout ready for your next project.
+
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/da29e9d6d0868b72613d06b9ee6b693afcf495da/screenshots/soss.png)
+
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/da29e9d6d0868b72613d06b9ee6b693afcf495da/screenshots/sos.png)
+
+---
+
+## Walkthrough
+
+Click the image to watch the full walkthrough video 
+
+[![Vero Designer Demo](https://i.ibb.co/6J4vbY21/verodesigner-thumb-github.png)](https://www.youtube.com/watch?v=3N8e078Pl40)
 
 ---
 
@@ -23,7 +34,7 @@ The following example compares a manually designed stripboard layout with one ge
 
 Despite being created automatically, it produces a layout nearly identical in size and overall efficiency to one designed by an experienced human builder.
 
-![image alt](https://github.com/blazethablunt/VeroDesigner/blob/6a879b6973c17424ade8f4feb4defaa748776c8d/screenshots/d%2B%20comparison.png)
+![image alt](https://github.com/blazethablunt/VeroDesigner/blob/da29e9d6d0868b72613d06b9ee6b693afcf495da/screenshots/d%2B%20comparison.png)
 
 ---
 
@@ -39,7 +50,7 @@ Use the left sidebar to select components and place them on the schematic grid.
 
 ## Editing the Generated Vero Layout
 
-The generated Vero layout includes editing features, allowing you to fine-tune the result before building.
+The generated vero layout includes editing features, allowing you to fine-tune the result before building.
 
 You can:
 
@@ -84,8 +95,8 @@ The **Vero Settings** section provides several useful options, including:
 * **Update IDs** – Reassigns IDs to all schematic components (schematic page only)
 * **Update Vero** – Applies schematic changes to the existing Vero layout without generating a new layout
 * **Regenerate layout** – Generates a completely new layout after major schematic changes
-* **Auto describe** – Generates a description for the layout based on used components **\*NEW\***
-* **Standing resistors** – Optional feature to save space, off by default **\*NEW\***
+* **Auto describe** – Generates a description for the layout based on used components
+* **Standing resistors** – Optional feature to save space, off by default
 
 ---
 
@@ -99,7 +110,7 @@ You can also:
 * Add a project description
 * Export PNG images from both the schematic editor and the generated Vero layout
 * Export BOM
-* Import .kicad_sch files  **\*NEW\***
+* Import .kicad_sch files
 
 
 ![image alt](https://i.ibb.co/VWDH2ktB/import-Button.png)
@@ -127,25 +138,25 @@ You can also:
 * NE5532
 * LM833
 * JRC4558
-* OPA2134 **\*NEW\***
-* TL082 **\*NEW\***
-* JRC4580 **\*NEW\***
-* LM358 **\*NEW\***
+* OPA2134 
+* TL082 
+* JRC4580 
+* LM358
 
 **Single**
 
 * LM741
-* NE5534 **\*NEW\***
-* TL071 **\*NEW\***
-* LM308 **\*NEW\***
-* OPA134 **\*NEW\***
+* NE5534 
+* TL071 
+* LM308 
+* OPA134 
 
 **Quad**
 
-* LM324 **\*NEW\***
-* TL064 **\*NEW\***
-* TL074 **\*NEW\***
-* TL084 **\*NEW\***
+* LM324 
+* TL064 
+* TL074 
+* TL084 
 
 ### Transistors
 
@@ -156,10 +167,12 @@ You can also:
 * BC548
 * BC549
 * BC550
-* MPSA13 **\*NEW\***
-* MPSA14 **\*NEW\***
-* MPSA18 **\*NEW\***
-* BC184 **\*NEW\***
+* MPSA13 
+* MPSA14 
+* MPSA18 
+* BC184
+* 2N5088 **\*NEW\***
+* 2N5089 **\*NEW\***
 
 **BJT (PNP)**
 
@@ -172,25 +185,40 @@ You can also:
 **JFET**
 
 * J201
+* J112 **\*NEW\***
+* J113 **\*NEW\***
 * 2N5457
 * 2N5458
 * 2N5459
-* 2N3819 **\*NEW\***
-* 2N5484 **\*NEW\***
-* MPF102 **\*NEW\***
-* MPF103 **\*NEW\***
-* BF245 **\*NEW\***
-* 2SK30A **\*NEW\***
-* 2SK117 **\*NEW\***
+* 2N3819 
+* 2N5484 
+* MPF102 
+* MPF103 
+* BF245 
+* 2SK30A 
+* 2SK117 
+
+**MOSFET**
+
+* 2N7000 **\*NEW\***
+* BS170 **\*NEW\***
+* BS250 **\*NEW\***
+* ZVP3306A **\*NEW\***
 
 ### Integrated Circuits
 
 * PT2399
-* NE555 **\*NEW\***
-* LM386 **\*NEW\***
-* LM13700 **\*NEW\***
-* LM3914 **\*NEW\***
-* LM3915 **\*NEW\***
+* NE555 
+* LM386 
+* LM13700 
+* LM3914 
+* LM3915
+* Daisy IC **\*NEW\***
+
+**Tubes**
+
+* 12AX7 **\*NEW\***
+* 12AU7 **\*NEW\***
   
 ---
 
@@ -198,26 +226,32 @@ You can also:
 
 Vero Designer has no external dependencies.
 
-You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.2.0/Vero.Designer.1.2.0.html) the HTML file and run it completely offline in your web browser.
+You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.3.0/Vero_Designer_1.3.0.html) the HTML file and run it completely offline in your web browser.
 
 ---
 
 ## What's New
-### Version 1.2.0
+### Version 1.3.0
 
-* Added KiCad importer (**BETA**)
-* Added marquee selection
-* Added new component models
-* Added Auto-describe
-* Added generic IC (under "Other IC's")
-* Added 3PST & 3PDT
-* Added ground symbol to GND quick net
-* Added new icons for the editing tools
-* Added standing resistors option
-* Added duplicate shortcut (Ctrl/Cmd+D)
-* Expanded grid
-* Improved wiring (each line is editable)
-* Fixed transistor's schematic symbol pinout letters
-* Fixed component icons on left sidebar
-* Moved layout to the center
-* "Checks" tab shows which component is unconnected
+* Added tubes
+* Added MOSFETs
+* Added settings
+* Added 'change net color' option
+* Added component count
+* Added estimated board size
+* Added resize board from all sides
+* Added themes
+* Added color customization
+* Added vero grid
+* Added zoom in & zoom out shortcuts (W - zoom in, Q - zoom out)
+* Added full screen button
+* Added mouse scroll button navigation
+* Added option to 'verify' layouts
+* Added creator name
+* Added daisy IC (under "Other IC's")
+* Moved critical errors to status bar
+* Fixed 'Auto-describe' not describing input connected through potentiometer
+* Fixed 2SK30A pinout and package orientation
+* Fixed common wiring issues
+* Reduced interactive area around component pins
+
