@@ -77,7 +77,7 @@ Custom nets can also be created using the **Net Label** component.
 
 Each net supports two placement modes:
 
-* **Offboard** – Creates a connection point on the edge of the Vero board.
+* **Offboard** – Creates a connection point on the edge of the vero board.
 * **Onboard** – Creates an internal label only.
 
 Quick nets default to **Offboard**, while custom nets default to **Onboard**, but this can be changed at any time.
@@ -93,7 +93,7 @@ The **Vero Settings** section provides several useful options, including:
 * **Maximum board columns**
 * **Component opacity**
 * **Update IDs** – Reassigns IDs to all schematic components (schematic page only)
-* **Update Vero** – Applies schematic changes to the existing Vero layout without generating a new layout
+* **Update Vero** – Applies schematic changes to the existing vero layout without generating a new layout
 * **Regenerate layout** – Generates a completely new layout after major schematic changes
 * **Auto describe** – Generates a description for the layout based on used components
 * **Standing resistors** – Optional feature to save space, off by default
@@ -108,7 +108,7 @@ You can also:
 
 * Give your circuit a name
 * Add a project description
-* Export PNG images from both the schematic editor and the generated Vero layout
+* Export PNG images from both the schematic editor and the generated vero layout
 * Export BOM
 * Import .kicad_sch files
 
@@ -123,6 +123,7 @@ You can also:
 * Capacitors
 * Op-Amps
 * Transistors
+* Tubes **\*NEW\***
 * Diodes
 * Potentiometers
 * Switches
@@ -180,7 +181,7 @@ You can also:
 * 2N3906
 * BC558
 * BC559
-* BC550
+* BC560
 
 **JFET**
 
