@@ -3,7 +3,7 @@
   <span margin-top:"0">Vero Designer</span>
 </h1>
 
-[![GitHub Release](https://img.shields.io/github/v/release/blazethablunt/VeroDesigner)](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.3.0/Vero_Designer_1.3.0.html) [![See What's New](https://img.shields.io/badge/See-What's_New-blue)](#whats-new) ![Static Badge](https://img.shields.io/badge/dependencies-none-red) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/blazethablunt/verodesigner/total)
+[![GitHub Release](https://img.shields.io/github/v/release/blazethablunt/VeroDesigner)](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.4.0/Vero_Designer_1.4.0.html) [![See What's New](https://img.shields.io/badge/See-What's_New-blue)](#whats-new) ![Static Badge](https://img.shields.io/badge/dependencies-none-red) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/blazethablunt/verodesigner/total)
  ![GitHub Repo stars](https://img.shields.io/github/stars/blazethablunt/veroDesigner) 
 
 
@@ -123,7 +123,8 @@ You can also:
 * Capacitors
 * Op-Amps
 * Transistors
-* Tubes **\*NEW\***
+* Tubes
+* ICs
 * Diodes
 * Potentiometers
 * Switches
@@ -172,8 +173,13 @@ You can also:
 * MPSA14 
 * MPSA18 
 * BC184
-* 2N5088 **\*NEW\***
-* 2N5089 **\*NEW\***
+* 2N5088
+* 2N5089
+* 2N2222 **\*NEW\***
+* 2N4401 **\*NEW\***
+* 2N5551 **\*NEW\***
+* BC337 **\*NEW\***
+* KSC1845 **\*NEW\***
 
 **BJT (PNP)**
 
@@ -182,12 +188,17 @@ You can also:
 * BC558
 * BC559
 * BC560
+* BC327 **\*NEW\***
+* 2N2907 **\*NEW\***
+* 2N4403 **\*NEW\***
+* 2N5401 **\*NEW\***
+* KSA992 **\*NEW\***
 
 **JFET**
 
 * J201
-* J112 **\*NEW\***
-* J113 **\*NEW\***
+* J112
+* J113
 * 2N5457
 * 2N5458
 * 2N5459
@@ -201,10 +212,10 @@ You can also:
 
 **MOSFET**
 
-* 2N7000 **\*NEW\***
-* BS170 **\*NEW\***
-* BS250 **\*NEW\***
-* ZVP3306A **\*NEW\***
+* 2N7000
+* BS170
+* BS250
+* ZVP3306A
 
 ### Integrated Circuits
 
@@ -214,12 +225,23 @@ You can also:
 * LM13700 
 * LM3914 
 * LM3915
-* Daisy IC **\*NEW\***
+* CD40106 **\*NEW\***
+* CD4066 **\*NEW\***
+* CD4051 **\*NEW\***
+* CD4046 **\*NEW\***
+* CD4017 **\*NEW\***
+* CD4093 **\*NEW\***
+* CD4052 **\*NEW\***
+* CD4053 **\*NEW\***
+* CD4040 **\*NEW\***
+* V2164 **\*NEW\***
+* Daisy IC
+* Generic IC
 
 **Tubes**
 
-* 12AX7 **\*NEW\***
-* 12AU7 **\*NEW\***
+* 12AX7
+* 12AU7
   
 ---
 
@@ -227,32 +249,24 @@ You can also:
 
 Vero Designer has no external dependencies.
 
-You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.3.0/Vero_Designer_1.3.0.html) the HTML file and run it completely offline in your web browser.
+You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/download/v1.4.0/Vero_Designer_1.4.0.html) the HTML file and run it completely offline in your web browser.
 
 ---
 
 ## What's New
-### Version 1.3.0
+### Version 1.4.0
 
-* Added tubes
-* Added MOSFETs
-* Added settings
-* Added 'change net color' option
-* Added component count
-* Added estimated board size
-* Added resize board from all sides
-* Added themes
-* Added color customization
-* Added vero grid
-* Added zoom in & zoom out shortcuts (W - zoom in, Q - zoom out)
-* Added full screen button
-* Added mouse scroll button navigation
-* Added option to 'verify' layouts
-* Added creator name
-* Added daisy IC (under "Other IC's")
-* Moved critical errors to status bar
-* Fixed 'Auto-describe' not describing input connected through potentiometer
-* Fixed 2SK30A pinout and package orientation
-* Fixed common wiring issues
-* Reduced interactive area around component pins
+* Added an option to move edge connections
+* Added cycling component models and types using mouse scroll wheel when drawing (Op-amps and transistors only)
+* Added optional smaller components in schematic view
+* Added "Show pin numbers" option
+* Added live component count
+* Moved text labels closer to the component when vertical
+* Added new transistors
+* Added new ICs
+* Added trimpot types
+* Added adjustable pin space on "Other ICs"
+* Added "Other ICs" to auto describe
+* Fixed "generated layout" data not being reset after closing project
+* Changed regulator UI to transistor UI
 
