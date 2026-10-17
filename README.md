@@ -56,6 +56,8 @@ Vero Designer currently has 2 board types and 3 auto routers.
 * Compact (x+y) - Creates a vero layout, best for bigger, more complex circuits. Width and height controls.
 * Perf (beta) - Creates a perfboard layout. Width control only. This router is in beta mode and will be improved.
 
+![image alt](https://i.ibb.co/xtX5CQT0/board-types.png)
+
 ---
 
 ## Editing the Generated Layout
@@ -116,6 +118,8 @@ The **Vero Settings** section provides several useful options, including:
 The pinout editor displays the pin configuration of all built-in transistor models
 and lets you customize pin designations to support transistors not included in the built-in library.
 
+![image alt](https://i.ibb.co/xtTz36Jd/pinout-editor.png)
+
 ---
 
 ## Layout dock
@@ -128,6 +132,8 @@ The dock has 5 buttons:
 * **Add link** - Creates a new link on the board.
 * **Add cut** - Creates a new cut on the board.
 * **Delete** - Deletes selected items.
+
+![image alt](https://i.ibb.co/PZs9wbLh/dock.png)
 
 ---
 
@@ -142,9 +148,6 @@ You can also:
 * Export PNG images from both the schematic editor and the generated layout
 * Export BOM
 * Import .kicad_sch files
-
-
-![image alt](https://i.ibb.co/VWDH2ktB/import-Button.png)
 
 ---
 
