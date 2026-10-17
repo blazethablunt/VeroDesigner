@@ -52,9 +52,9 @@ Use the left sidebar to select components and place them on the schematic grid.
 
 Vero Designer currently has 2 board types and 3 auto routers.
 
-* Compact (x) - Creates a vero layout, best for smaller circuits. Width control only.
-* Compact (x+y) - Creates a vero layout, best for bigger, more complex circuits. Width and height controls.
-* Perf (beta) - Creates a perfboard layout. Width control only. This router is in beta mode and will be improved.
+* **Compact (x)** - Creates a vero layout, best for smaller circuits. Width control only.
+* **Compact (x+y)** - Creates a vero layout, best for bigger, more complex circuits. Width and height controls.
+* **Perf (beta)** - Creates a perfboard layout. Width control only. This router is in beta mode and will be improved.
 
 ![image alt](https://i.ibb.co/xtX5CQT0/board-types.png)
 
@@ -128,7 +128,7 @@ The layout dock appears on the layout pages only when the user mouse-hovers the 
 The dock has 5 buttons:
 
 * **Add text** - Adds text to the layout, with color and resize options.
-* **Add image** - Adds any image to the layout.
+* **Add image** - Adds image to the layout.
 * **Add link** - Creates a new link on the board.
 * **Add cut** - Creates a new cut on the board.
 * **Delete** - Deletes selected items.
