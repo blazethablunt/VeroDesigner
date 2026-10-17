@@ -123,11 +123,11 @@ and lets you customize pin designations to support transistors not included in t
 The layout dock appears on the layout pages only when the user mouse-hovers the lower part of the screen. 
 The dock has 5 buttons:
 
-* Add text - Adds text to the layout, with color and resize options.
-* Add image - Adds any image to the layout.
-* Add link - Creates a new link on the board.
-* Add cut - Creates a new cut on the board.
-* Delete - Deletes selected items.
+* **Add text** - Adds text to the layout, with color and resize options.
+* **Add image** - Adds any image to the layout.
+* **Add link** - Creates a new link on the board.
+* **Add cut** - Creates a new cut on the board.
+* **Delete** - Deletes selected items.
 
 ---
 
