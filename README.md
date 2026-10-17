@@ -10,9 +10,9 @@
 
 
 
-Vero Designer is an automatic vero layout generator that converts electronic schematics into buildable stripboard layouts.
+Vero Designer is an automatic layout generator that converts electronic schematics into buildable stripboard and perfboard layouts.
 
-Simply draw your schematic, click **Generate Vero**, and Vero Designer will create a vero layout ready for your next project.
+Simply draw your schematic, click **Generate**, and Vero Designer will create a layout ready for your next project.
 
 ![image alt](https://github.com/blazethablunt/VeroDesigner/blob/da29e9d6d0868b72613d06b9ee6b693afcf495da/screenshots/soss.png)
 
@@ -48,17 +48,28 @@ Use the left sidebar to select components and place them on the schematic grid.
 
 ---
 
-## Editing the Generated Vero Layout
+## Board Types
 
-The generated vero layout includes editing features, allowing you to fine-tune the result before building.
+Vero Designer currently has 2 board types and 3 auto routers.
+
+* Compact (x) - Creates a vero layout, best for smaller circuits. Width control only.
+* Compact (x+y) - Creates a vero layout, best for bigger, more complex circuits. Width and height controls.
+* Perf (beta) - Creates a perfboard layout. Width control only. This router is in beta mode and will be improved.
+
+---
+
+## Editing the Generated Layout
+
+The generated layout includes editing features, allowing you to fine-tune the result before building.
 
 You can:
 
 * Move any component
 * Move links (jumpers)
 * Move strip cuts
-* Resize the board using the bottom-right resize handle
+* Resize the board using the resize handle/s
 * Delete links/cuts
+* Change electrolytic capacitors size (select capacitor and scroll up or down using the mouse wheel)
 
 When a strip cut is placed beneath a component, the component's opacity is automatically reduced to improve visibility.
 
@@ -77,7 +88,7 @@ Custom nets can also be created using the **Net Label** component.
 
 Each net supports two placement modes:
 
-* **Offboard** – Creates a connection point on the edge of the vero board.
+* **Offboard** – Creates a connection point on the edge of the board.
 * **Onboard** – Creates an internal label only.
 
 Quick nets default to **Offboard**, while custom nets default to **Onboard**, but this can be changed at any time.
@@ -93,10 +104,30 @@ The **Vero Settings** section provides several useful options, including:
 * **Maximum board columns**
 * **Component opacity**
 * **Update IDs** – Reassigns IDs to all schematic components (schematic page only)
-* **Update Vero** – Applies schematic changes to the existing vero layout without generating a new layout
+* **Update Vero** – Applies schematic changes to the existing layout without generating a new layout
 * **Regenerate layout** – Generates a completely new layout after major schematic changes
 * **Auto describe** – Generates a description for the layout based on used components
 * **Standing resistors** – Optional feature to save space, off by default
+
+---
+
+## Pinout editor
+
+The pinout editor displays the pin configuration of all built-in transistor models
+and lets you customize pin designations to support transistors not included in the built-in library.
+
+---
+
+## Layout dock
+
+The layout dock appears on the layout pages only when the user mouse-hovers the lower part of the screen. 
+The dock has 5 buttons:
+
+* Add text - Adds text to the layout, with color and resize options.
+* Add image - Adds any image to the layout.
+* Add link - Creates a new link on the board.
+* Add cut - Creates a new cut on the board.
+* Delete - Deletes selected items.
 
 ---
 
@@ -108,7 +139,7 @@ You can also:
 
 * Give your circuit a name
 * Add a project description
-* Export PNG images from both the schematic editor and the generated vero layout
+* Export PNG images from both the schematic editor and the generated layout
 * Export BOM
 * Import .kicad_sch files
 
@@ -175,11 +206,11 @@ You can also:
 * BC184
 * 2N5088
 * 2N5089
-* 2N2222 **\*NEW\***
-* 2N4401 **\*NEW\***
-* 2N5551 **\*NEW\***
-* BC337 **\*NEW\***
-* KSC1845 **\*NEW\***
+* 2N2222
+* 2N4401
+* 2N5551
+* BC337
+* KSC1845
 
 **BJT (PNP)**
 
@@ -188,11 +219,11 @@ You can also:
 * BC558
 * BC559
 * BC560
-* BC327 **\*NEW\***
-* 2N2907 **\*NEW\***
-* 2N4403 **\*NEW\***
-* 2N5401 **\*NEW\***
-* KSA992 **\*NEW\***
+* BC327 
+* 2N2907
+* 2N4403
+* 2N5401
+* KSA992
 
 **JFET**
 
@@ -225,23 +256,26 @@ You can also:
 * LM13700 
 * LM3914 
 * LM3915
-* CD40106 **\*NEW\***
-* CD4066 **\*NEW\***
-* CD4051 **\*NEW\***
-* CD4046 **\*NEW\***
-* CD4017 **\*NEW\***
-* CD4093 **\*NEW\***
-* CD4052 **\*NEW\***
-* CD4053 **\*NEW\***
-* CD4040 **\*NEW\***
-* V2164 **\*NEW\***
+* CD40106
+* CD4066
+* CD4051
+* CD4046
+* CD4017
+* CD4093
+* CD4052
+* CD4053
+* CD4040
+* V2164 
 * Daisy IC
 * Generic IC
 
-**Tubes**
+### Tubes
 
 * 12AX7
 * 12AU7
+* 12AT7 **\*NEW\***
+* 12AY7 **\*NEW\***
+* E88CC **\*NEW\***
   
 ---
 
@@ -254,19 +288,17 @@ You can [Download](https://github.com/blazethablunt/VeroDesigner/releases/downlo
 ---
 
 ## What's New
-### Version 1.4.0
+### Version 1.5.0
 
-* Added an option to move edge connections
-* Added cycling component models and types using mouse scroll wheel when drawing (Op-amps and transistors only)
-* Added optional smaller components in schematic view
-* Added "Show pin numbers" option
-* Added live component count
-* Moved text labels closer to the component when vertical
-* Added new transistors
-* Added new ICs
-* Added trimpot types
-* Added adjustable pin space on "Other ICs"
-* Added "Other ICs" to auto describe
-* Fixed "generated layout" data not being reset after closing project
-* Changed regulator UI to transistor UI
-
+* Added perfboards
+* Added view modes
+* Added tube models (12AT7, 12AY7, E88CC)
+* Added voltage regulator types (78L09, 78L12, 78L15)
+* Added the option to change electrolytic capactors size
+* Added the option to move edge connections to the other side of the board
+* Added pinout editor
+* Added "export dual display" setting
+* Added "Share" option (mobile only)
+* Safari/macOS/iOS/iPadOS optimization
+* Extended Generic IC to use 4 & 6 total pins
+* Fixed "Update IDs"
