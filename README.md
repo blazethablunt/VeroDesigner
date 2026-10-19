@@ -25,7 +25,7 @@ Simply draw your schematic, click **Generate**, and Vero Designer will create a 
 
 Click the image to watch the full walkthrough video 
 
-[![Vero Designer Demo](https://i.ibb.co/6J4vbY21/verodesigner-thumb-github.png)](https://www.youtube.com/watch?v=3N8e078Pl40)
+[![Vero Designer Demo](https://i.ibb.co/cK9m1RsS/verodesigner-thumb3.png)](https://www.youtube.com/watch?v=3N8e078Pl40)
 
 ---
 
