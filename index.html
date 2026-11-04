@@ -1941,6 +1941,13 @@
                 <option value="symbol">Ground symbol</option>
               </select>
             </div>
+            <div id="veroLeadSpanField" class="field hidden">
+              <label for="propVeroLeadSpan">Vero lead spacing</label>
+              <select id="propVeroLeadSpan">
+                <option value="">Automatic</option>
+              </select>
+              <div class="vero-editor-note">Hole pitches between the component's two leads.</div>
+            </div>
             <div class="field">
               <label id="propValueLabel" for="propValue">Value / model</label>
               <input id="propValue" maxlength="40">
@@ -3752,6 +3759,8 @@
         propNetScope: document.getElementById("propNetScope"),
         gndDisplayField: document.getElementById("gndDisplayField"),
         propGndDisplay: document.getElementById("propGndDisplay"),
+        veroLeadSpanField: document.getElementById("veroLeadSpanField"),
+        propVeroLeadSpan: document.getElementById("propVeroLeadSpan"),
         propRotation: document.getElementById("propRotation"),
         flipMirrorBtn: document.getElementById("flipMirrorBtn"),
         copySchematicBtn: document.getElementById("copySchematicBtn"),
@@ -5724,6 +5733,21 @@
         state.selectedComponentIds = [];
       }
 
+      const VERO_LEAD_SPAN_COMPONENT_TYPES = new Set(["resistor", "capacitor", "capacitorPolarized", "diode", "led"]);
+
+      function veroLeadSpanOptions(component) {
+        const type = canonicalComponentType(component?.type);
+        if (type === "resistor" || type === "capacitor" || type === "capacitorPolarized") return [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        if (type === "diode" || type === "led") return [2, 3];
+        return [];
+      }
+
+      function normalizeVeroLeadSpan(component, value = component?.veroLeadSpan) {
+        if (!VERO_LEAD_SPAN_COMPONENT_TYPES.has(canonicalComponentType(component?.type))) return null;
+        const span = Number(value);
+        return Number.isInteger(span) && veroLeadSpanOptions(component).includes(span) ? span : null;
+      }
+
       function toggleComponentSelection(id) {
         const ids = selectedComponentIds();
         const index = ids.indexOf(id);
@@ -5748,6 +5772,9 @@
         const normalized = { ...component, type };
         normalized.instanceUid = String(component?.instanceUid || "").trim() || uid("CMP");
         normalized.mirrored = Boolean(component?.mirrored);
+        const veroLeadSpan = normalizeVeroLeadSpan(normalized);
+        if (veroLeadSpan === null) delete normalized.veroLeadSpan;
+        else normalized.veroLeadSpan = veroLeadSpan;
         if (type === "transistor") {
           const family = transistorFamilyData(component?.value);
           const customKind = canonicalTransistorKind(component?.transistorKind || rawType);
@@ -9451,7 +9478,7 @@
         const dynamicFields = [
           els.transistorTypeField, els.transistorModelField, els.diodeTypeField, els.diodeModelField, els.opampTypeField, els.opampModelField,
           els.tubeModelField, els.switchTypeField, els.otherIcModelField, els.icGridSpacingField, els.voltageRegulatorModelField, els.ledScopeField, els.ledColorField, els.netScopeField,
-          els.gndDisplayField, els.potTypeField, els.potResistanceField, els.pinoutEditorField
+          els.gndDisplayField, els.veroLeadSpanField, els.potTypeField, els.potResistanceField, els.pinoutEditorField
         ];
         if (!selectedComponent) {
           els.propertyEmpty.classList.remove("hidden");
@@ -9484,6 +9511,7 @@
         const selectedIsTerminal = selectedComponent.type === "terminal";
         const selectedIsQuickGround = isQuickGroundTerminal(selectedComponent);
         const selectedIsPotentiometer = selectedComponent.type === "potentiometer";
+        const veroLeadSpanOptionsForSelection = veroLeadSpanOptions(selectedComponent);
         els.pinoutEditorField.classList.toggle("hidden", !selectedIsTransistor || state.view !== "schematic");
         els.transistorTypeField.classList.toggle("hidden", !selectedIsTransistor);
         els.transistorModelField.classList.toggle("hidden", !selectedIsTransistor);
@@ -9500,6 +9528,14 @@
         els.ledColorField.classList.toggle("hidden", !selectedIsLed);
         els.netScopeField.classList.toggle("hidden", !selectedIsTerminal);
         els.gndDisplayField.classList.toggle("hidden", !selectedIsQuickGround);
+        els.veroLeadSpanField.classList.toggle("hidden", !veroLeadSpanOptionsForSelection.length);
+        if (veroLeadSpanOptionsForSelection.length) {
+          els.propVeroLeadSpan.replaceChildren(
+            new Option("Automatic", ""),
+            ...veroLeadSpanOptionsForSelection.map(span => new Option(`${span} hole pitches`, String(span)))
+          );
+          els.propVeroLeadSpan.value = String(normalizeVeroLeadSpan(selectedComponent) || "");
+        }
         els.potTypeField.classList.toggle("hidden", !selectedIsPotentiometer);
         els.potResistanceField.classList.toggle("hidden", !selectedIsPotentiometer);
         if (selectedIsPotentiometer) {
@@ -10025,7 +10061,9 @@
           // vertical passives can replace otherwise necessary link wires by
           // reaching the two copper rows that their schematic nets already use.
           const resistorSpans = [3, 4, 5, 6, 7, 8, 9];
-          const standingResistorSpans = state.boardSettings.standingResistors === true ? [1, 2] : [];
+          const standingResistorSpans = state.boardSettings.standingResistors === true || component.veroLeadSpan <= 2
+            ? [1, 2]
+            : [];
           const capacitorSpans = [1, 2, 3, 4, 5, 6, 7, 8, 9];
           const verticalSpans = component.type === "resistor"
             ? [...standingResistorSpans, ...resistorSpans]
@@ -10069,7 +10107,10 @@
               });
             }
           }
-          return variants;
+          const requiredSpan = normalizeVeroLeadSpan(component);
+          return requiredSpan === null
+            ? variants
+            : variants.filter(variant => passiveFootprintSpan(variant) === requiredSpan);
         }
 
         if (component.type === "transistor") {
@@ -10243,6 +10284,7 @@
           else if (component.type === "led") record.scope = ledScopeOf(component);
           else if (component.type === "potentiometer") record.potType = potTypeOf(component);
           else if (component.type === "terminal") record.scope = terminalScopeOf(component);
+          if (component.veroLeadSpan) record.veroLeadSpan = component.veroLeadSpan;
           return record;
         }).sort((a, b) => a.identity.localeCompare(b.identity));
 
@@ -12238,7 +12280,10 @@
       // The passive parts themselves therefore bridge nets whenever possible,
       // and links are reserved for the connections copper and component leads
       // cannot complete.
-      function trackPassiveModeCost(type, distance) {
+      function trackPassiveModeCost(type, distance, requiredSpan = null) {
+        if (Number.isInteger(requiredSpan)) {
+          return distance === requiredSpan ? 0 : 120 + Math.abs(distance - requiredSpan) * 18;
+        }
         if (type === "resistor") {
           if (distance >= 3 && distance <= 9) return 0;
           if (state.boardSettings.standingResistors === true && (distance === 1 || distance === 2)) return 0;
@@ -12381,16 +12426,17 @@
             const rowsB = [...rowSetFor(edge.b)];
             let bestDistance = Infinity;
             let bestPair = null;
+            const spanCost = distance => trackPassiveModeCost(edge.type, distance, edge.meta.component.veroLeadSpan);
             for (const ra of rowsA) for (const rb of rowsB) {
               const d = Math.abs(ra - rb);
-              if (trackPassiveModeCost(edge.type, d) < trackPassiveModeCost(edge.type, bestDistance) ||
-                  (trackPassiveModeCost(edge.type, d) === trackPassiveModeCost(edge.type, bestDistance) && d < bestDistance)) {
+              if (spanCost(d) < spanCost(bestDistance) ||
+                  (spanCost(d) === spanCost(bestDistance) && d < bestDistance)) {
                 bestDistance = d;
                 bestPair = [ra, rb];
               }
             }
-            score += trackPassiveModeCost(edge.type, bestDistance) + (denseCompact ? bestDistance * .45 : 0);
-            if (bestPair && bestDistance > 0 && trackPassiveModeCost(edge.type, bestDistance) < 60) {
+            score += spanCost(bestDistance) + (denseCompact ? bestDistance * .45 : 0);
+            if (bestPair && bestDistance > 0 && spanCost(bestDistance) < 60) {
               const lo = Math.min(...bestPair);
               const hi = Math.max(...bestPair);
               for (let boundary = lo; boundary < hi && boundary < crossing.length; boundary += 1) crossing[boundary] += 1;
@@ -13461,6 +13507,7 @@
             transistorKind: component.type === "transistor" ? transistorKindOf(component) : undefined,
             transistorLeadOrder: component.type === "transistor" ? transistorLeadOrder(component) : undefined,
             otherIcModel: component.type === "otherIC" ? otherIcModelOf(component) : undefined,
+            veroLeadSpan: component.veroLeadSpan,
             value: component.value
           })),
           wires: state.wires.map(wire => [routerSeedEndpoint(wire.a), routerSeedEndpoint(wire.b)]).sort(),
@@ -15519,7 +15566,10 @@
       // The passive parts themselves therefore bridge nets whenever possible,
       // and links are reserved for the connections copper and component leads
       // cannot complete.
-      function trackPassiveModeCost(type, distance) {
+      function trackPassiveModeCost(type, distance, requiredSpan = null) {
+        if (Number.isInteger(requiredSpan)) {
+          return distance === requiredSpan ? 0 : 120 + Math.abs(distance - requiredSpan) * 18;
+        }
         if (type === "resistor") {
           if (distance >= 3 && distance <= 9) return 0;
           if (state.boardSettings.standingResistors === true && (distance === 1 || distance === 2)) return 0;
@@ -15640,16 +15690,17 @@
             const rowsB = [...rowSetFor(edge.b)];
             let bestDistance = Infinity;
             let bestPair = null;
+            const spanCost = distance => trackPassiveModeCost(edge.type, distance, edge.meta.component.veroLeadSpan);
             for (const ra of rowsA) for (const rb of rowsB) {
               const d = Math.abs(ra - rb);
-              if (trackPassiveModeCost(edge.type, d) < trackPassiveModeCost(edge.type, bestDistance) ||
-                  (trackPassiveModeCost(edge.type, d) === trackPassiveModeCost(edge.type, bestDistance) && d < bestDistance)) {
+              if (spanCost(d) < spanCost(bestDistance) ||
+                  (spanCost(d) === spanCost(bestDistance) && d < bestDistance)) {
                 bestDistance = d;
                 bestPair = [ra, rb];
               }
             }
-            score += trackPassiveModeCost(edge.type, bestDistance);
-            if (bestPair && bestDistance > 0 && trackPassiveModeCost(edge.type, bestDistance) < 60) {
+            score += spanCost(bestDistance);
+            if (bestPair && bestDistance > 0 && spanCost(bestDistance) < 60) {
               const lo = Math.min(...bestPair);
               const hi = Math.max(...bestPair);
               for (let boundary = lo; boundary < hi && boundary < crossing.length; boundary += 1) crossing[boundary] += 1;
@@ -16171,6 +16222,7 @@
             transistorKind: component.type === "transistor" ? transistorKindOf(component) : undefined,
             transistorLeadOrder: component.type === "transistor" ? transistorLeadOrder(component) : undefined,
             otherIcModel: component.type === "otherIC" ? otherIcModelOf(component) : undefined,
+            veroLeadSpan: component.veroLeadSpan,
             value: component.value
           })),
           wires: state.wires.map(wire => [routerSeedEndpoint(wire.a), routerSeedEndpoint(wire.b)]).sort(),
@@ -24715,6 +24767,21 @@
           recordState();
           renderAll();
           setStatus(`All GND quick nets now use the ${state.schematicSettings.gndDisplay === "symbol" ? "ground symbol" : "GND text"}.`);
+        });
+
+        els.propVeroLeadSpan.addEventListener("change", () => {
+          const components = selectedComponents();
+          if (components.length !== 1 || !veroLeadSpanOptions(components[0]).length) return;
+          const component = components[0];
+          const nextSpan = normalizeVeroLeadSpan(component, els.propVeroLeadSpan.value);
+          if (nextSpan === null) delete component.veroLeadSpan;
+          else component.veroLeadSpan = nextSpan;
+          invalidateGeneratedLayout();
+          recordState();
+          renderAll();
+          setStatus(nextSpan === null
+            ? `${component.id} Vero lead spacing set to automatic.`
+            : `${component.id} Vero lead spacing set to ${nextSpan} hole pitches.`);
         });
 
         els.propValue.addEventListener("change", () => {
