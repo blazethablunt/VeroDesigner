@@ -5,6 +5,7 @@
 - The application is the standalone `index.html`; its markup, styles, and JavaScript are inline. There is no package manifest, build step, automated test runner, or linter configured, and no dependencies to install.
 - Run it by opening `index.html` in a modern browser. For local HTTP serving, run `python3 -m http.server 8000` from the repository root and open `http://localhost:8000/`.
 - There is no automated single-test command. For a focused manual smoke test, load the example circuit, generate a Compact or Perf layout, make an edit, then save or export it. The browser console also exposes selected state and helpers under `window.__VD`.
+- Run `node scripts/benchmark-vero.mjs` to benchmark and validate small, dense, and package-heavy generated circuits in all three router modes. Use `--fixture=small`, `--fixture=dense`, `--fixture=package-heavy`, or `--repeats=N` to narrow or repeat the run. The script uses a locally installed Chrome/Chromium; set `CHROME_BIN` if it is not on `PATH`.
 
 ## Architecture
 

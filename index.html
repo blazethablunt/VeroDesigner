@@ -6555,6 +6555,50 @@
         }, 0)));
       }
 
+      let activeGenerationMetrics = null;
+      let lastGenerationMetrics = null;
+
+      function recordGenerationMetric(name, elapsed = 0) {
+        if (!activeGenerationMetrics) return;
+        const metric = activeGenerationMetrics.stages[name] || (activeGenerationMetrics.stages[name] = { calls: 0, totalMs: 0, maxMs: 0 });
+        metric.calls += 1;
+        metric.totalMs += elapsed;
+        metric.maxMs = Math.max(metric.maxMs, elapsed);
+      }
+
+      function recordGenerationCount(name, amount = 1) {
+        if (!activeGenerationMetrics) return;
+        activeGenerationMetrics.counters[name] = (activeGenerationMetrics.counters[name] || 0) + amount;
+      }
+
+      function measureGenerationSync(name, callback) {
+        const startedAt = performance.now();
+        try {
+          return callback();
+        } finally {
+          recordGenerationMetric(name, performance.now() - startedAt);
+        }
+      }
+
+      async function measureGenerationAsync(name, callback) {
+        const startedAt = performance.now();
+        try {
+          return await callback();
+        } finally {
+          recordGenerationMetric(name, performance.now() - startedAt);
+        }
+      }
+
+      function generationMetricsSnapshot() {
+        if (!activeGenerationMetrics) return lastGenerationMetrics;
+        return {
+          routerMode: activeGenerationMetrics.routerMode,
+          totalMs: performance.now() - activeGenerationMetrics.startedAt,
+          counters: { ...activeGenerationMetrics.counters },
+          stages: Object.fromEntries(Object.entries(activeGenerationMetrics.stages).map(([name, metric]) => [name, { ...metric }]))
+        };
+      }
+
       function setGenerationBusy(busy, message = "Searching for the most compact valid layout…") {
         state.isGenerating = Boolean(busy);
         const generationHeading = els.generationOverlay?.querySelector(".generation-card strong");
@@ -10482,7 +10526,7 @@
       function buildGreedyPlacement(metadata, width, heightLimit, clearance, random, trialIndex, forceLegacyScoring = false) {
         const ordered = placementOrder(metadata, random, trialIndex);
         const placements = [];
-        const rectangles = [];
+        const occupiedCells = new Uint8Array(width * heightLimit);
         const contactsByNet = new Map();
         const contactsByRow = new Map();
         let maxX = 0;
@@ -10494,8 +10538,13 @@
             if (footprint.width > width || footprint.height > heightLimit) continue;
             for (let y = 0; y <= heightLimit - footprint.height; y += 1) {
               for (let x = 0; x <= width - footprint.width; x += 1) {
-                const rectangle = { x, y, width: footprint.width, height: footprint.height };
-                if (rectangles.some(existing => rectanglesOverlap(rectangle, existing, clearance))) continue;
+                let overlaps = false;
+                for (let occupiedY = y; occupiedY < y + footprint.height && !overlaps; occupiedY += 1) {
+                  for (let occupiedX = x; occupiedX < x + footprint.width; occupiedX += 1) {
+                    if (occupiedCells[occupiedY * width + occupiedX]) { overlaps = true; break; }
+                  }
+                }
+                if (overlaps) continue;
 
                 const nextMaxX = Math.max(maxX, x + footprint.width);
                 const nextMaxY = Math.max(maxY, y + footprint.height);
@@ -10567,7 +10616,11 @@
             y: best.y
           };
           placements.push(placement);
-          rectangles.push({ x: best.x, y: best.y, width: best.footprint.width, height: best.footprint.height });
+          for (let occupiedY = Math.max(0, best.y - clearance); occupiedY < Math.min(heightLimit, best.y + best.footprint.height + clearance); occupiedY += 1) {
+            for (let occupiedX = Math.max(0, best.x - clearance); occupiedX < Math.min(width, best.x + best.footprint.width + clearance); occupiedX += 1) {
+              occupiedCells[occupiedY * width + occupiedX] = 1;
+            }
+          }
           maxX = Math.max(maxX, best.x + best.footprint.width);
           maxY = Math.max(maxY, best.y + best.footprint.height);
 
@@ -12663,6 +12716,28 @@
         return placements;
       }
 
+      const trackOccupancyCache = new Map();
+      let trackOccupancyStamp = 0;
+
+      function nextTrackOccupancy(width, height) {
+        const key = `${width}:${height}`;
+        let cells = trackOccupancyCache.get(key);
+        if (cells) {
+          trackOccupancyCache.delete(key);
+        } else {
+          cells = new Uint32Array(width * height);
+        }
+        trackOccupancyStamp = (trackOccupancyStamp + 1) >>> 0;
+        if (!trackOccupancyStamp) {
+          for (const cachedCells of trackOccupancyCache.values()) cachedCells.fill(0);
+          cells.fill(0);
+          trackOccupancyStamp = 1;
+        }
+        trackOccupancyCache.set(key, cells);
+        if (trackOccupancyCache.size > 4) trackOccupancyCache.delete(trackOccupancyCache.keys().next().value);
+        return { cells, stamp: trackOccupancyStamp };
+      }
+
       function scoreTrackPlacementFast(placements, metadataById, activeNets, demands, width, height) {
         const denseCompact = state.boardSettings.busSpacing !== 3 && placements.length > 26;
         const activeIndexes = new Set(activeNets.map(net => net.index));
@@ -12670,16 +12745,20 @@
         const bodyCells = new Set();
         const obstacleCells = new Set();
         const coordinateSet = new Set();
-        const rectangles = [];
+        const { cells: occupiedCells, stamp: occupancyStamp } = nextTrackOccupancy(width, height);
         let horizontalResistors = 0;
         let horizontalCapacitors = 0;
         for (const placement of placements) {
           const meta = metadataById.get(placement.component.id);
           if (!meta) return null;
-          const rectangle = { x: placement.x, y: placement.y, width: placement.footprint.width, height: placement.footprint.height };
           if (placement.x < 0 || placement.y < 0 || placement.x + placement.footprint.width > width || placement.y + placement.footprint.height > height) return null;
-          if (rectangles.some(other => trackRectanglesOverlap(rectangle, other, 0))) return null;
-          rectangles.push(rectangle);
+          for (let y = placement.y; y < placement.y + placement.footprint.height; y += 1) {
+            for (let x = placement.x; x < placement.x + placement.footprint.width; x += 1) {
+              const cell = y * width + x;
+              if (occupiedCells[cell] === occupancyStamp) return null;
+              occupiedCells[cell] = occupancyStamp;
+            }
+          }
           const type = placement.component.type;
           if (type === "resistor" && String(placement.footprint.orientation).startsWith("horizontal")) horizontalResistors += 1;
           if ((type === "capacitor" || type === "capacitorPolarized") && String(placement.footprint.orientation).startsWith("horizontal")) horizontalCapacitors += 1;
@@ -12762,7 +12841,7 @@
         return { score, linkEstimate, missingTerminals, defects, cuts, fragmentation, horizontalResistors, horizontalCapacitors };
       }
 
-      function refineTrackCandidate(candidate, metadata, metadataById, activeNets, demands, random, steps = 5000) {
+      async function refineTrackCandidate(candidate, metadata, metadataById, activeNets, demands, random, steps = 5000) {
         const optionById = new Map(metadata.map(meta => [meta.component.id, buildTrackComponentOptions(meta, candidate.assignment)]));
         const clonePlacements = placements => placements.map(placement => ({ ...placement }));
         let current = clonePlacements(candidate.placements);
@@ -12770,7 +12849,9 @@
         if (!currentFast) return candidate;
         let best = clonePlacements(current);
         let bestFast = currentFast;
+        let lastBestStep = 0;
         for (let step = 0; step < steps; step += 1) {
+          if (step > 0 && step % 800 === 0) await yieldToBrowser();
           const next = clonePlacements(current);
           const temperature = 52 * (1 - step / steps) + .03;
           const mode = random();
@@ -12805,9 +12886,11 @@
             if (nextFast.score < bestFast.score) {
               best = clonePlacements(next);
               bestFast = nextFast;
+              lastBestStep = step;
               if (!bestFast.defects && bestFast.missingTerminals <= 1 && bestFast.linkEstimate <= 5) break;
             }
           }
+          if (step - lastBestStep >= Math.max(1400, Math.floor(steps * .55))) break;
         }
         return { ...candidate, placements: best, fast: bestFast };
       }
@@ -12899,6 +12982,7 @@
               if (!placements) continue;
               const fast = scoreTrackPlacementFast(placements, metadataById, activeNets, demands, width, assignment.height);
               if (!fast) continue;
+              recordGenerationCount("compact.fastCandidates");
               const candidate = { placements, fast, width, height: assignment.height, assignment };
               const widthBest = bestByWidth.get(width);
               if (!widthBest || candidate.fast.score < widthBest.fast.score) bestByWidth.set(width, candidate);
@@ -12922,7 +13006,8 @@
           if (els.generationProgressText) els.generationProgressText.textContent = `Refining copper-row placement… ${index + 1}/${refinementCount}`;
           const random = seededRandom(baseSeed ^ Math.imul(index + 91, 374761393));
           const refinementSteps = hasTallFixedAnchor ? 900 : (metadata.length <= 12 ? 2200 : metadata.length <= 26 ? 5600 : 2200);
-          const refined = refineTrackCandidate(refinementSeeds[index], metadata, metadataById, activeNets, demands, random, refinementSteps);
+          const refined = await measureGenerationAsync("compact.refinement", () =>
+            refineTrackCandidate(refinementSeeds[index], metadata, metadataById, activeNets, demands, random, refinementSteps));
           refinedCandidates.push(refined);
           if ((index + 1) % 2 === 0) await yieldToBrowser();
         }
@@ -12933,9 +13018,16 @@
         
         let bestLayout = null;
         let evaluated = 0;
+        const evaluatedCandidates = new Set();
         for (const candidate of fastCandidates) {
+          const candidateKey = `${candidate.width}:${candidate.placements
+            .map(placement => `${placement.component.id}:${placement.footprint.key}:${placement.x},${placement.y}`)
+            .sort().join(";")}`;
+          if (evaluatedCandidates.has(candidateKey)) continue;
+          evaluatedCandidates.add(candidateKey);
           if (els.generationProgressText) els.generationProgressText.textContent = `Evaluating track-centric layouts… ${evaluated + 1}/${fastCandidates.length}`;
-          const layout = evaluateCompactPlacement(candidate.placements, netData, activeNets, 0, maximumColumns, Math.min(maximumColumns, candidate.width));
+          const layout = measureGenerationSync("compact.fullEvaluation", () =>
+            evaluateCompactPlacement(candidate.placements, netData, activeNets, 0, maximumColumns, Math.min(maximumColumns, candidate.width)));
           if (layout && layout.columns <= maximumColumns && (!bestLayout || isLayoutBetter(layout, bestLayout))) bestLayout = layout;
           evaluated += 1;
           if (evaluated % 3 === 0) await yieldToBrowser();
@@ -13528,7 +13620,8 @@
         }
         if (els.generationProgressText) els.generationProgressText.textContent = "Assigning nets to copper strips…";
         await yieldToBrowser();
-        let bestLayout = await buildTrackCentricLayout(metadata, netData, activeNets, maximumColumns, clearance, baseSeed);
+        let bestLayout = await measureGenerationAsync("compact.xy.trackSearch", () =>
+          buildTrackCentricLayout(metadata, netData, activeNets, maximumColumns, clearance, baseSeed));
         if (compactInput() !== originalCompactInput) throw new Error("The schematic or routing settings changed during generation. Generate again to use the updated project.");
         // Daisy is a 20-row fixed package. Once the track-centric solver has
         // produced a fully routed and validated candidate, the generic local
@@ -13604,15 +13697,18 @@
         }
         if (els.generationProgressText) els.generationProgressText.textContent = "Optimizing component placement…";
         await yieldToBrowser();
-        bestLayout = refineCompactPlacement(bestLayout, metadata, netData, activeNets, clearance, baseSeed);
+        bestLayout = measureGenerationSync("compact.placementRefinement", () =>
+          refineCompactPlacement(bestLayout, metadata, netData, activeNets, clearance, baseSeed));
         if (!bestLayout || bestLayout.columns > maximumColumns || bestLayout.rows > maximumRows) return { error: `The autorouter could not keep the optimized layout within the ${maximumColumns}-column maximum.` };
         if (els.generationProgressText) els.generationProgressText.textContent = "Removing unused board space…";
         await yieldToBrowser();
-        bestLayout = compactPlacementSweeps(bestLayout, metadata, netData, activeNets, clearance);
+        bestLayout = measureGenerationSync("compact.placementSweeps", () =>
+          compactPlacementSweeps(bestLayout, metadata, netData, activeNets, clearance));
         if (!bestLayout || bestLayout.columns > maximumColumns || bestLayout.rows > maximumRows) return { error: `The autorouter could not keep the compacted layout within the ${maximumColumns}-column maximum.` };
         if (els.generationProgressText) els.generationProgressText.textContent = "Squeezing component columns…";
         await yieldToBrowser();
-        bestLayout = await compactPlacementColumns(bestLayout, metadata, netData, activeNets, clearance);
+        bestLayout = await measureGenerationAsync("compact.columnSqueezing", () =>
+          compactPlacementColumns(bestLayout, metadata, netData, activeNets, clearance));
         if (!bestLayout || bestLayout.columns > maximumColumns || bestLayout.rows > maximumRows) return { error: `The autorouter could not keep the column-compacted layout within the ${maximumColumns}-column maximum.` };
         bestLayout = removeCompletelyUnusedBoardLines(bestLayout);
         if (!bestLayout || bestLayout.columns > maximumColumns || bestLayout.rows > maximumRows) return { error: `The autorouter could not keep the final layout within the ${maximumColumns}-column maximum.` };
@@ -13780,7 +13876,7 @@
       function buildGreedyPlacement(metadata, width, heightLimit, clearance, random, trialIndex, forceLegacyScoring = false) {
         const ordered = placementOrder(metadata, random, trialIndex);
         const placements = [];
-        const rectangles = [];
+        const occupiedCells = new Uint8Array(width * heightLimit);
         const contactsByNet = new Map();
         const contactsByRow = new Map();
         let maxX = 0;
@@ -13792,8 +13888,13 @@
             if (footprint.width > width || footprint.height > heightLimit) continue;
             for (let y = 0; y <= heightLimit - footprint.height; y += 1) {
               for (let x = 0; x <= width - footprint.width; x += 1) {
-                const rectangle = { x, y, width: footprint.width, height: footprint.height };
-                if (rectangles.some(existing => rectanglesOverlap(rectangle, existing, clearance))) continue;
+                let overlaps = false;
+                for (let occupiedY = y; occupiedY < y + footprint.height && !overlaps; occupiedY += 1) {
+                  for (let occupiedX = x; occupiedX < x + footprint.width; occupiedX += 1) {
+                    if (occupiedCells[occupiedY * width + occupiedX]) { overlaps = true; break; }
+                  }
+                }
+                if (overlaps) continue;
 
                 const nextMaxX = Math.max(maxX, x + footprint.width);
                 const nextMaxY = Math.max(maxY, y + footprint.height);
@@ -13865,7 +13966,11 @@
             y: best.y
           };
           placements.push(placement);
-          rectangles.push({ x: best.x, y: best.y, width: best.footprint.width, height: best.footprint.height });
+          for (let occupiedY = Math.max(0, best.y - clearance); occupiedY < Math.min(heightLimit, best.y + best.footprint.height + clearance); occupiedY += 1) {
+            for (let occupiedX = Math.max(0, best.x - clearance); occupiedX < Math.min(width, best.x + best.footprint.width + clearance); occupiedX += 1) {
+              occupiedCells[occupiedY * width + occupiedX] = 1;
+            }
+          }
           maxX = Math.max(maxX, best.x + best.footprint.width);
           maxY = Math.max(maxY, best.y + best.footprint.height);
 
@@ -15893,16 +15998,20 @@
         const bodyCells = new Set();
         const obstacleCells = new Set();
         const coordinateSet = new Set();
-        const rectangles = [];
+        const { cells: occupiedCells, stamp: occupancyStamp } = nextTrackOccupancy(width, height);
         let horizontalResistors = 0;
         let horizontalCapacitors = 0;
         for (const placement of placements) {
           const meta = metadataById.get(placement.component.id);
           if (!meta) return null;
-          const rectangle = { x: placement.x, y: placement.y, width: placement.footprint.width, height: placement.footprint.height };
           if (placement.x < 0 || placement.y < 0 || placement.x + placement.footprint.width > width || placement.y + placement.footprint.height > height) return null;
-          if (rectangles.some(other => trackRectanglesOverlap(rectangle, other, 0))) return null;
-          rectangles.push(rectangle);
+          for (let y = placement.y; y < placement.y + placement.footprint.height; y += 1) {
+            for (let x = placement.x; x < placement.x + placement.footprint.width; x += 1) {
+              const cell = y * width + x;
+              if (occupiedCells[cell] === occupancyStamp) return null;
+              occupiedCells[cell] = occupancyStamp;
+            }
+          }
           const type = placement.component.type;
           if (type === "resistor" && String(placement.footprint.orientation).startsWith("horizontal")) horizontalResistors += 1;
           if ((type === "capacitor" || type === "capacitorPolarized") && String(placement.footprint.orientation).startsWith("horizontal")) horizontalCapacitors += 1;
@@ -15984,7 +16093,7 @@
         return { score, linkEstimate, missingTerminals, defects, cuts, fragmentation, horizontalResistors, horizontalCapacitors };
       }
 
-      function refineTrackCandidate(candidate, metadata, metadataById, activeNets, demands, random, steps = 5000) {
+      async function refineTrackCandidate(candidate, metadata, metadataById, activeNets, demands, random, steps = 5000) {
         const optionById = new Map(metadata.map(meta => [meta.component.id, buildTrackComponentOptions(meta, candidate.assignment)]));
         const clonePlacements = placements => placements.map(placement => ({ ...placement }));
         let current = clonePlacements(candidate.placements);
@@ -15992,7 +16101,9 @@
         if (!currentFast) return candidate;
         let best = clonePlacements(current);
         let bestFast = currentFast;
+        let lastBestStep = 0;
         for (let step = 0; step < steps; step += 1) {
+          if (step > 0 && step % 800 === 0) await yieldToBrowser();
           const next = clonePlacements(current);
           const temperature = 52 * (1 - step / steps) + .03;
           const mode = random();
@@ -16027,9 +16138,11 @@
             if (nextFast.score < bestFast.score) {
               best = clonePlacements(next);
               bestFast = nextFast;
+              lastBestStep = step;
               if (!bestFast.defects && bestFast.missingTerminals <= 1 && bestFast.linkEstimate <= 5) break;
             }
           }
+          if (step - lastBestStep >= Math.max(1400, Math.floor(steps * .55))) break;
         }
         return { ...candidate, placements: best, fast: bestFast };
       }
@@ -16113,6 +16226,7 @@
               if (!placements) continue;
               const fast = scoreTrackPlacementFast(placements, metadataById, activeNets, demands, width, assignment.height);
               if (!fast) continue;
+              recordGenerationCount("compact.fastCandidates");
               const candidate = { placements, fast, width, height: assignment.height, assignment };
               const widthBest = bestByWidth.get(width);
               if (!widthBest || candidate.fast.score < widthBest.fast.score) bestByWidth.set(width, candidate);
@@ -16136,7 +16250,8 @@
           if (els.generationProgressText) els.generationProgressText.textContent = `Refining copper-row placement… ${index + 1}/${refinementCount}`;
           const random = seededRandom(baseSeed ^ Math.imul(index + 91, 374761393));
           const refinementSteps = hasTallFixedAnchor ? 900 : (metadata.length <= 12 ? 2200 : metadata.length <= 26 ? 5600 : 4200);
-          const refined = refineTrackCandidate(refinementSeeds[index], metadata, metadataById, activeNets, demands, random, refinementSteps);
+          const refined = await measureGenerationAsync("compact.refinement", () =>
+            refineTrackCandidate(refinementSeeds[index], metadata, metadataById, activeNets, demands, random, refinementSteps));
           refinedCandidates.push(refined);
           if ((index + 1) % 2 === 0) await yieldToBrowser();
         }
@@ -16147,9 +16262,16 @@
         
         let bestLayout = null;
         let evaluated = 0;
+        const evaluatedCandidates = new Set();
         for (const candidate of fastCandidates) {
+          const candidateKey = `${candidate.width}:${candidate.placements
+            .map(placement => `${placement.component.id}:${placement.footprint.key}:${placement.x},${placement.y}`)
+            .sort().join(";")}`;
+          if (evaluatedCandidates.has(candidateKey)) continue;
+          evaluatedCandidates.add(candidateKey);
           if (els.generationProgressText) els.generationProgressText.textContent = `Evaluating track-centric layouts… ${evaluated + 1}/${fastCandidates.length}`;
-          const layout = evaluateCompactPlacement(candidate.placements, netData, activeNets, 0, maximumColumns, Math.min(maximumColumns, candidate.width));
+          const layout = measureGenerationSync("compact.fullEvaluation", () =>
+            evaluateCompactPlacement(candidate.placements, netData, activeNets, 0, maximumColumns, Math.min(maximumColumns, candidate.width)));
           if (layout && layout.columns <= maximumColumns && (!bestLayout || isLayoutBetter(layout, bestLayout))) bestLayout = layout;
           evaluated += 1;
           if (evaluated % 3 === 0) await yieldToBrowser();
@@ -16231,7 +16353,8 @@
 
         if (els.generationProgressText) els.generationProgressText.textContent = "Assigning nets to copper strips…";
         await yieldToBrowser();
-        let bestLayout = await buildTrackCentricLayout(metadata, netData, activeNets, maximumColumns, clearance, baseSeed);
+        let bestLayout = await measureGenerationAsync("compact.x.trackSearch", () =>
+          buildTrackCentricLayout(metadata, netData, activeNets, maximumColumns, clearance, baseSeed));
         // Daisy is a 20-row fixed package. Once the track-centric solver has
         // produced a fully routed and validated candidate, the generic local
         // refinement stages add very little value but can spend minutes
@@ -16303,15 +16426,18 @@
         }
         if (els.generationProgressText) els.generationProgressText.textContent = "Optimizing component placement…";
         await yieldToBrowser();
-        bestLayout = refineCompactPlacement(bestLayout, metadata, netData, activeNets, clearance, baseSeed);
+        bestLayout = measureGenerationSync("compact.placementRefinement", () =>
+          refineCompactPlacement(bestLayout, metadata, netData, activeNets, clearance, baseSeed));
         if (!bestLayout || bestLayout.columns > maximumColumns) return { error: `The autorouter could not keep the optimized layout within the ${maximumColumns}-column maximum.` };
         if (els.generationProgressText) els.generationProgressText.textContent = "Removing unused board space…";
         await yieldToBrowser();
-        bestLayout = compactPlacementSweeps(bestLayout, metadata, netData, activeNets, clearance);
+        bestLayout = measureGenerationSync("compact.placementSweeps", () =>
+          compactPlacementSweeps(bestLayout, metadata, netData, activeNets, clearance));
         if (!bestLayout || bestLayout.columns > maximumColumns) return { error: `The autorouter could not keep the compacted layout within the ${maximumColumns}-column maximum.` };
         if (els.generationProgressText) els.generationProgressText.textContent = "Squeezing component columns…";
         await yieldToBrowser();
-        bestLayout = await compactPlacementColumns(bestLayout, metadata, netData, activeNets, clearance);
+        bestLayout = await measureGenerationAsync("compact.columnSqueezing", () =>
+          compactPlacementColumns(bestLayout, metadata, netData, activeNets, clearance));
         if (!bestLayout || bestLayout.columns > maximumColumns) return { error: `The autorouter could not keep the column-compacted layout within the ${maximumColumns}-column maximum.` };
         bestLayout = removeCompletelyUnusedBoardLines(bestLayout);
         if (!bestLayout || bestLayout.columns > maximumColumns) return { error: `The autorouter could not keep the final layout within the ${maximumColumns}-column maximum.` };
@@ -16488,6 +16614,36 @@
         return out;
       }
 
+      const perfNeighborCache = new Map();
+
+      function perfBoardNeighbors(columns, rows) {
+        const key = `${columns}:${rows}`;
+        if (perfNeighborCache.has(key)) {
+          const cached = perfNeighborCache.get(key);
+          perfNeighborCache.delete(key);
+          perfNeighborCache.set(key, cached);
+          return cached;
+        }
+        const count = columns * rows;
+        const neighbors = new Int32Array(count * 8).fill(-1);
+        const offsets = [1, columns, -1, -columns, columns + 1, columns - 1, -columns - 1, -columns + 1];
+        for (let cell = 0; cell < count; cell += 1) {
+          const x = cell % columns;
+          const y = Math.floor(cell / columns);
+          for (let direction = 0; direction < offsets.length; direction += 1) {
+            const dx = direction === 0 || direction === 4 || direction === 7 ? 1 :
+              direction === 2 || direction === 5 || direction === 6 ? -1 : 0;
+            const dy = direction === 1 || direction === 4 || direction === 5 ? 1 :
+              direction === 3 || direction === 6 || direction === 7 ? -1 : 0;
+            if (x + dx < 0 || x + dx >= columns || y + dy < 0 || y + dy >= rows) continue;
+            neighbors[cell * 8 + direction] = cell + offsets[direction];
+          }
+        }
+        perfNeighborCache.set(key, neighbors);
+        if (perfNeighborCache.size > 4) perfNeighborCache.delete(perfNeighborCache.keys().next().value);
+        return neighbors;
+      }
+
       function preparePerfBoard(raw,netData,activeNets,columns,rows) {
         const b=rawPlacementBounds(raw);
         if(b.width>columns-2||b.height>rows-2)return null;
@@ -16524,6 +16680,11 @@
       // A diagonal occupies the centre of its grid square as well, preventing
       // another net from crossing it. No second-layer escape routes exist.
       async function routePerfBoardFixedPads(layout, attempt = 0, maxPasses = 60, checkpoint = async () => {}, feedback = null) {
+        return measureGenerationAsync("perf.fixedPadRoute", () =>
+          routePerfBoardFixedPadsImpl(layout, attempt, maxPasses, checkpoint, feedback));
+      }
+
+      async function routePerfBoardFixedPadsImpl(layout, attempt = 0, maxPasses = 60, checkpoint = async () => {}, feedback = null) {
         const {columns, rows, activeNets} = layout, count = columns * rows;
         const netIds = new Map(activeNets.map((net, id) => [net.index, id]));
         const fixed = new Int32Array(count).fill(-1), targets = activeNets.map(() => []);
@@ -16540,15 +16701,8 @@
         order.sort((a,b) => targets[b.id].length - targets[a.id].length || a.jitter - b.jitter);
         const use = new Uint16Array(count), diagUse = new Uint16Array(count);
         const history = new Float64Array(count), diagHistory = new Float64Array(count), solutions = new Map();
-        const directions = [[1,0], [0,1], [-1,0], [0,-1], [1,1], [-1,1], [-1,-1], [1,-1]];
-        const neighbors = Array.from({length: count}, (_, cell) => {
-          const x=cell%columns, y=Math.floor(cell/columns);
-          return directions.flatMap(([dx,dy],dir) => {
-            const xx=x+dx, yy=y+dy;
-            return xx<0||yy<0||xx>=columns||yy>=rows ? [] : [{cell:yy*columns+xx,dir,
-              cost:dx&&dy?1.45:1, diagonal:dx&&dy?Math.min(y,yy)*columns+Math.min(x,xx):-1}];
-          });
-        });
+        const neighbors = perfBoardNeighbors(columns, rows);
+        const isTarget = new Uint8Array(count);
         const distances=new Float64Array(count*8), previous=new Int32Array(count*8);
         let heap=[];
         const push=(s,c)=>{let i=heap.length;heap.push([s,c]);while(i){const p=(i-1)>>1;if(heap[p][1]<=c)break;heap[i]=heap[p];i=p;}heap[i]=[s,c];};
@@ -16562,7 +16716,7 @@
             const pins=targets[id];if(!pins.length)continue;
             const old=solutions.get(id);if(old){for(const i of old.cells)use[i]--;for(const i of old.diagonals)diagUse[i]--;solutions.delete(id);}
             const tree=new Set([pins[(attempt+pass%3)%pins.length]]), edges=new Set(), diagonals=new Set();
-            const isTarget=new Uint8Array(count);for(const i of pins)isTarget[i]=1;
+            isTarget.fill(0);for(const i of pins)isTarget[i]=1;
             while(!pins.every(i=>tree.has(i))) {
               distances.fill(Infinity);previous.fill(-1);heap=[];
               for(const i of tree)for(let dir=0;dir<8;dir++){distances[i*8+dir]=0;push(i*8+dir,0);}
@@ -16571,11 +16725,12 @@
                 const [s,cost]=pop();if(cost!==distances[s])continue;
                 const cell=Math.floor(s/8),direction=s%8;
                 if(isTarget[cell]&&!tree.has(cell)){goal=s;break;}
-                for(const next of neighbors[cell]) {
-                  if(fixed[next.cell]>=0&&fixed[next.cell]!==id)continue;
-                  const diagonal=next.diagonal;
-                  const penalty=use[next.cell]*present+history[next.cell]+(diagonal>=0?diagUse[diagonal]*present+diagHistory[diagonal]:0);
-                  const d=cost+next.cost+(direction===next.dir?0:.22)+penalty,to=next.cell*8+next.dir;
+                for(let nextDirection=0;nextDirection<8;nextDirection++) {
+                  const nextCell=neighbors[cell*8+nextDirection];
+                  if(nextCell<0||(fixed[nextCell]>=0&&fixed[nextCell]!==id))continue;
+                  const diagonal=nextDirection>=4?Math.floor(Math.min(cell,nextCell)/columns)*columns+Math.min(cell%columns,nextCell%columns):-1;
+                  const penalty=use[nextCell]*present+history[nextCell]+(diagonal>=0?diagUse[diagonal]*present+diagHistory[diagonal]:0);
+                  const d=cost+(nextDirection>=4?1.45:1)+(direction===nextDirection?0:.22)+penalty,to=nextCell*8+nextDirection;
                   if(d<distances[to]){distances[to]=d;previous[to]=s;push(to,d);}
                 }
               }
@@ -16614,6 +16769,11 @@
       }
 
       async function routePerfBoard(layout, attempt = 0, maxPasses = 60, checkpoint = async () => {}, feedback = null) {
+        return measureGenerationAsync("perf.routeSearch", () =>
+          routePerfBoardImpl(layout, attempt, maxPasses, checkpoint, feedback));
+      }
+
+      async function routePerfBoardImpl(layout, attempt = 0, maxPasses = 60, checkpoint = async () => {}, feedback = null) {
         const {columns, rows, activeNets} = layout, count = columns * rows;
         const netIds = new Map(activeNets.map((net, id) => [net.index, id]));
         const fixed = new Int32Array(count).fill(-1), targets = activeNets.map(() => []);
@@ -16636,15 +16796,8 @@
         order.sort((a,b) => targets[b.id].length - targets[a.id].length || a.jitter - b.jitter);
         const use = new Uint16Array(count), diagUse = new Uint16Array(count);
         const history = new Float64Array(count), diagHistory = new Float64Array(count), solutions = new Map();
-        const directions = [[1,0], [0,1], [-1,0], [0,-1], [1,1], [-1,1], [-1,-1], [1,-1]];
-        const neighbors = Array.from({length: count}, (_, cell) => {
-          const x=cell%columns, y=Math.floor(cell/columns);
-          return directions.flatMap(([dx,dy],dir) => {
-            const xx=x+dx, yy=y+dy;
-            return xx<0||yy<0||xx>=columns||yy>=rows ? [] : [{cell:yy*columns+xx,dir,
-              cost:dx&&dy?1.45:1, diagonal:dx&&dy?Math.min(y,yy)*columns+Math.min(x,xx):-1}];
-          });
-        });
+        const neighbors = perfBoardNeighbors(columns, rows);
+        const isTarget = new Uint8Array(count);
         const distances=new Float64Array(count*8), previous=new Int32Array(count*8);
         let heap=[];
         const push=(s,c)=>{let i=heap.length;heap.push([s,c]);while(i){const p=(i-1)>>1;if(heap[p][1]<=c)break;heap[i]=heap[p];i=p;}heap[i]=[s,c];};
@@ -16660,7 +16813,7 @@
             if(!pins.length) pins.push(demands[0].terminal.row*columns+(demands[0].terminal.side==="right"?columns-1:0));
             const old=solutions.get(id);if(old){for(const i of old.cells)use[i]--;for(const i of old.diagonals)diagUse[i]--;solutions.delete(id);}
             const tree=new Set([pins[((attempt>>>0)+pass%3)%pins.length]]), edges=new Set(), diagonals=new Set(), landings=[];
-            const isTarget=new Uint8Array(count);for(const i of pins)isTarget[i]=1;
+            isTarget.fill(0);for(const i of pins)isTarget[i]=1;
             while(!pins.every(i=>tree.has(i)) || landings.length<demands.length) {
               const terminalPhase=pins.every(i=>tree.has(i));
               const demand=terminalPhase?demands[landings.length]:null;
@@ -16678,13 +16831,14 @@
                 const [s,cost]=pop();if(cost!==distances[s])continue;
                 const cell=Math.floor(s/8),direction=s%8;
                 if(isTarget[cell]&&(terminalPhase||!tree.has(cell))){goal=s;break;}
-                for(const next of neighbors[cell]) {
-                  if(fixed[next.cell]>=0&&fixed[next.cell]!==id)continue;
-                  const diagonal=next.diagonal;
-                  const penalty=use[next.cell]*present+history[next.cell]+(diagonal>=0?diagUse[diagonal]*present+diagHistory[diagonal]:0);
-                  const edgePenalty=terminalPhase && isTarget[next.cell] && demand.terminal.preferredSide &&
-                    (next.cell%columns===0?"left":"right")!==demand.terminal.preferredSide ? 1.5 : 0;
-                  const d=cost+next.cost+(direction===next.dir?0:.22)+penalty+edgePenalty,to=next.cell*8+next.dir;
+                for(let nextDirection=0;nextDirection<8;nextDirection++) {
+                  const nextCell=neighbors[cell*8+nextDirection];
+                  if(nextCell<0||(fixed[nextCell]>=0&&fixed[nextCell]!==id))continue;
+                  const diagonal=nextDirection>=4?Math.floor(Math.min(cell,nextCell)/columns)*columns+Math.min(cell%columns,nextCell%columns):-1;
+                  const penalty=use[nextCell]*present+history[nextCell]+(diagonal>=0?diagUse[diagonal]*present+diagHistory[diagonal]:0);
+                  const edgePenalty=terminalPhase && isTarget[nextCell] && demand.terminal.preferredSide &&
+                    (nextCell%columns===0?"left":"right")!==demand.terminal.preferredSide ? 1.5 : 0;
+                  const d=cost+(nextDirection>=4?1.45:1)+(direction===nextDirection?0:.22)+penalty+edgePenalty,to=nextCell*8+nextDirection;
                   if(d<distances[to]){distances[to]=d;previous[to]=s;push(to,d);}
                 }
               }
@@ -17813,8 +17967,21 @@
       }
 
       async function buildVeroLayout() {
-        if (state.routerMode === "perf") return buildPerfLayout();
-        return state.routerMode === "xy" ? buildCompactXYLayout() : buildCompactXLayout();
+        const metrics = { routerMode: state.routerMode, startedAt: performance.now(), counters: {}, stages: {} };
+        activeGenerationMetrics = metrics;
+        try {
+          const layout = await measureGenerationAsync(`router.${state.routerMode}`, () => {
+            if (state.routerMode === "perf") return buildPerfLayout();
+            return state.routerMode === "xy" ? buildCompactXYLayout() : buildCompactXLayout();
+          });
+          lastGenerationMetrics = generationMetricsSnapshot();
+          return layout;
+        } finally {
+          if (activeGenerationMetrics === metrics) {
+            lastGenerationMetrics = generationMetricsSnapshot();
+            activeGenerationMetrics = null;
+          }
+        }
       }
 
       function rowLabel(index) {
@@ -25773,7 +25940,7 @@
         setStatus(restored ? "Autosaved project restored." : "Ready. Place a component or load the example circuit.");
       }
 
-      window.__VD = { verifyRoutedConnectivity, applicationSettings, beginSchematicMiddlePan, moveSchematicMiddlePan, endSchematicMiddlePan, DEFAULT_VERO_THEME, DEFAULT_INTERFACE_THEME, DEFAULT_TRACE_NET_SATURATION, BUILT_IN_VERO_THEMES, currentInterfacePalette, deriveInterfaceThemeFromVeroTheme, applyInterfaceThemeLive, applyBuiltInThemePreset, setThemeCustomizerOpen, restorePersistedThemePreset, NET_COLOR_CYCLE_PALETTE, normalizeNetColorOverrides, netColorIdentity, hasFixedQuickNetColor, assignedNetColor, netColor, assignNewNetColor, syncGeneralSettingsInputs, applyDirectionalBoardResize, directionalBoardResizeTarget, currentVeroPalette, applyVeroThemeLive, parseHexColor, schematicNetColor, veroNetColor, traceNetOverlayOpacity, currentThemeFilePayload, importVeroThemeFile, exportVeroTheme, openSettingsPopover, closeSettingsPopover,  correctKiCadPotentiometerWiperPoints, kiCadGeometryConnectionScore, parseKiCadSexpr, parseKiCadImport, importKiCadModern, classifyKiCadBasicSymbol, kiCadImportedComponentAabb, kiCadSegmentIntersectsBox, getPinWorld, kiCadSimulationVoltageSourceInfo, kiCadSimulationSourceDefaultLabel, applyKiCadImportResult, importKiCadFile, addComponent, placeFromTool, wireRouteDefinition, moveWirePolylineSegment, applyWirePolyline, stickyAttachmentForWire, splitSchematicWireAtPinWithoutHistory, buildBomText, exportBom, deleteSelectedVeroItem, layoutHasForbiddenLinkCrossing, stickyConnectMovedComponents, applySchematicZoom, fitSchematicToViewport, resetSchematicZoomTo100, currentSchematicViewport, setRightSidebarCollapsed, transistorLeadOrder, transistorFamilyData, buildTrackCentricLayout, buildTrackRowAssignment, constructTrackPlacement, scoreTrackPlacementFast, state, restoreSnapshot, projectSnapshot, projectPayload, serializeVeroLayoutForProject, deserializeVeroLayoutFromProject, restoreProjectVeroLayout, deriveNets, buildBoardElectricalComponents, componentPlacementMetadata, boardFootprintVariants, tubeDefinitionFor, tubeSectionOf, tubeBaseIdOf, canonicalTubeModel, TUBE_MODEL_OPTIONS, opampDefinitionFor, opampKindOf, opampSectionOf, opampModelPinout, otherIcModelOf, isGenericIc, genericIcPinCountOf, makeGenericIcDefinition, GENERIC_IC_PIN_COUNTS, OTHER_IC_DEFS, OPAMP_MODEL_OPTIONS, OPAMP_MODEL_PINOUTS, evaluateCompactPlacement, buildVeroLayout, renderVero, refreshManualLayoutConnectivity, removeCompletelyUnusedBoardLines, isLayoutBetter, layoutQualityTuple, compactPlacementSweeps, refineCompactPlacement, buildGreedyPlacement, seededRandom, hashString, setTool, renderAll, buildCopperTopology, requiredLandingDefects, selectEdgeTerminalPads, routingColumnCandidates, insertRoutingColumn, assignNonOverlappingLinkColumns, segmentAvailableHoleXs, bestSegmentLink, linkAvoidanceAppliesTo, edgeTerminalRowsByColumn, routeOverlapsEdgeTerminal, routeOverlapsLayoutEdgeTerminal, routeCrossesPlacementPin, routeCrossesAnyComponentPin, validateManualVeroLayout, terminalScopeOf, isOffboardComponent, externalControlName, terminalPreferredSide, routeNetIndex, cloneEndpointUseMap, addLinkEndpointUse, computeDoubleLinkHoles, lineObstacleCount, canUseLinkEndpoint, endpointIsAccessible, componentIdentity, ensureComponentIdentities, schematicStructureSignature, reassignAllComponentIds, updateExistingVeroFromSchematic, newProject, generateVero };
+      window.__VD = { verifyRoutedConnectivity, getGenerationMetrics: generationMetricsSnapshot, applicationSettings, beginSchematicMiddlePan, moveSchematicMiddlePan, endSchematicMiddlePan, DEFAULT_VERO_THEME, DEFAULT_INTERFACE_THEME, DEFAULT_TRACE_NET_SATURATION, BUILT_IN_VERO_THEMES, currentInterfacePalette, deriveInterfaceThemeFromVeroTheme, applyInterfaceThemeLive, applyBuiltInThemePreset, setThemeCustomizerOpen, restorePersistedThemePreset, NET_COLOR_CYCLE_PALETTE, normalizeNetColorOverrides, netColorIdentity, hasFixedQuickNetColor, assignedNetColor, netColor, assignNewNetColor, syncGeneralSettingsInputs, applyDirectionalBoardResize, directionalBoardResizeTarget, currentVeroPalette, applyVeroThemeLive, parseHexColor, schematicNetColor, veroNetColor, traceNetOverlayOpacity, currentThemeFilePayload, importVeroThemeFile, exportVeroTheme, openSettingsPopover, closeSettingsPopover,  correctKiCadPotentiometerWiperPoints, kiCadGeometryConnectionScore, parseKiCadSexpr, parseKiCadImport, importKiCadModern, classifyKiCadBasicSymbol, kiCadImportedComponentAabb, kiCadSegmentIntersectsBox, getPinWorld, kiCadSimulationVoltageSourceInfo, kiCadSimulationSourceDefaultLabel, applyKiCadImportResult, importKiCadFile, addComponent, placeFromTool, wireRouteDefinition, moveWirePolylineSegment, applyWirePolyline, stickyAttachmentForWire, splitSchematicWireAtPinWithoutHistory, buildBomText, exportBom, deleteSelectedVeroItem, layoutHasForbiddenLinkCrossing, stickyConnectMovedComponents, applySchematicZoom, fitSchematicToViewport, resetSchematicZoomTo100, currentSchematicViewport, setRightSidebarCollapsed, transistorLeadOrder, transistorFamilyData, buildTrackCentricLayout, buildTrackRowAssignment, constructTrackPlacement, scoreTrackPlacementFast, state, restoreSnapshot, projectSnapshot, projectPayload, serializeVeroLayoutForProject, deserializeVeroLayoutFromProject, restoreProjectVeroLayout, deriveNets, buildBoardElectricalComponents, componentPlacementMetadata, boardFootprintVariants, tubeDefinitionFor, tubeSectionOf, tubeBaseIdOf, canonicalTubeModel, TUBE_MODEL_OPTIONS, opampDefinitionFor, opampKindOf, opampSectionOf, opampModelPinout, otherIcModelOf, isGenericIc, genericIcPinCountOf, makeGenericIcDefinition, GENERIC_IC_PIN_COUNTS, OTHER_IC_DEFS, OPAMP_MODEL_OPTIONS, OPAMP_MODEL_PINOUTS, evaluateCompactPlacement, buildVeroLayout, renderVero, refreshManualLayoutConnectivity, removeCompletelyUnusedBoardLines, isLayoutBetter, layoutQualityTuple, compactPlacementSweeps, refineCompactPlacement, buildGreedyPlacement, seededRandom, hashString, setTool, renderAll, buildCopperTopology, requiredLandingDefects, selectEdgeTerminalPads, routingColumnCandidates, insertRoutingColumn, assignNonOverlappingLinkColumns, segmentAvailableHoleXs, bestSegmentLink, linkAvoidanceAppliesTo, edgeTerminalRowsByColumn, routeOverlapsEdgeTerminal, routeOverlapsLayoutEdgeTerminal, routeCrossesPlacementPin, routeCrossesAnyComponentPin, validateManualVeroLayout, terminalScopeOf, isOffboardComponent, externalControlName, terminalPreferredSide, routeNetIndex, cloneEndpointUseMap, addLinkEndpointUse, computeDoubleLinkHoles, lineObstacleCount, canUseLinkEndpoint, endpointIsAccessible, componentIdentity, ensureComponentIdentities, schematicStructureSignature, reassignAllComponentIds, updateExistingVeroFromSchematic, newProject, generateVero };
       initialize();
     })();
   </script>
